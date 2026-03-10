@@ -1,0 +1,14 @@
+### Create a workout
+POST http://localhost:8080/api/workouts
+Content-Type: application/json
+
+{
+  "userId": "test-user",
+  "startTime": "2026-01-27T10:00:00",
+  "notes": "Push day"
+}
+
+### Get weekly volume
+GET http://localhost:8080/api/analytics/weekly-volume?weekStart=2026-01-27
+
+
