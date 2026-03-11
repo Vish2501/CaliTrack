@@ -1,6 +1,28 @@
+import { ExerciseEntry } from "../types/workout";
 import { supabase } from "./supabase";
 
 const BASE_URL = "http://localhost:8080";
+
+const DEFAULT_EXERCISES = [
+  { name: "Push-Up", category: "Chest" },
+  { name: "Pull-Up", category: "Back" },
+  { name: "Chin-Up", category: "Biceps" },
+  { name: "Dip", category: "Triceps" },
+  { name: "Inverted Row", category: "Back" },
+  { name: "Pike Push-Up", category: "Shoulders" },
+  { name: "Bodyweight Squat", category: "Quads" },
+  { name: "Hanging Knee Raise", category: "Core" },
+  { name: "Hanging Leg Raise", category: "Core" },
+  { name: "Plank", category: "Core" },
+  { name: "Cable Lateral Raise", category: "Shoulders" },
+  { name: "Overhead Tricep Extension", category: "Triceps" },
+  { name: "Bayesian Cable Curl", category: "Biceps" },
+  { name: "Face Pull", category: "Upper Back" },
+  { name: "Squat", category: "Quads" },
+  { name: "Romanian Deadlift", category: "Hamstrings" },
+  { name: "Bulgarian Split Squat", category: "Quads" },
+  { name: "Standing Calf Raise", category: "Calves" },
+] as const;
 
 export type WorkoutResponse = {
   id: number;
@@ -20,7 +42,33 @@ export type SetResponse = {
   rpe: number | null;
   timestamp: string;
 };
-import { ExerciseEntry } from "../types/workout";
+
+export type WorkoutDetailsResponse = WorkoutResponse & {
+  sets: SetResponse[];
+};
+
+export type WorkoutFrequencyResponse = {
+  weekStart: string;
+  workoutCount: number;
+};
+
+export type ExerciseResponse = {
+  id: number;
+  name: string;
+  category: string | null;
+  userId: string;
+};
+
+async function authHeaders(includeJson = false) {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("No session");
+
+  return {
+    Authorization: `Bearer ${token}`,
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+  };
+}
 
 export async function commitWorkout(
   workoutId: number,
@@ -50,10 +98,6 @@ export async function commitWorkout(
   return completedSets.length;
 }
 
-export type WorkoutDetailsResponse = WorkoutResponse & {
-  sets: SetResponse[];
-};
-
 export async function getWorkouts() {
   const res = await fetch(`${BASE_URL}/api/workouts`, {
     headers: await authHeaders(),
@@ -65,11 +109,6 @@ export async function getWorkouts() {
 
   return (await res.json()) as WorkoutResponse[];
 }
-
-export type WorkoutFrequencyResponse = {
-  weekStart: string;
-  workoutCount: number;
-};
 
 export async function getWorkoutFrequency(start: string, end: string) {
   const res = await fetch(
@@ -84,17 +123,6 @@ export async function getWorkoutFrequency(start: string, end: string) {
   }
 
   return (await res.json()) as WorkoutFrequencyResponse[];
-}
-
-async function authHeaders(includeJson = false) {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw new Error("No session");
-
-  return {
-    Authorization: `Bearer ${token}`,
-    ...(includeJson ? { "Content-Type": "application/json" } : {}),
-  };
 }
 
 export async function startWorkout() {
@@ -158,13 +186,6 @@ export async function finishWorkout(workoutId: number) {
   return (await res.json()) as WorkoutResponse;
 }
 
-export type ExerciseResponse = {
-  id: number;
-  name: string;
-  category: string | null;
-  userId: string;
-};
-
 export async function getExercises() {
   const res = await fetch(`${BASE_URL}/api/exercises`, {
     headers: await authHeaders(),
@@ -203,4 +224,27 @@ export async function deleteExercise(exerciseId: number) {
   if (!res.ok) {
     throw new Error(await res.text());
   }
+}
+
+export async function ensureUserExercises() {
+  const existingExercises = await getExercises();
+  const existingNames = new Set(
+    existingExercises.map((exercise) => exercise.name.trim().toLowerCase()),
+  );
+
+  const missingExercises = DEFAULT_EXERCISES.filter(
+    (exercise) => !existingNames.has(exercise.name.toLowerCase()),
+  );
+
+  if (missingExercises.length === 0) {
+    return existingExercises;
+  }
+
+  const createdExercises: ExerciseResponse[] = [];
+  for (const exercise of missingExercises) {
+    const created = await createExercise(exercise);
+    createdExercises.push(created);
+  }
+
+  return [...existingExercises, ...createdExercises];
 }

@@ -3,7 +3,7 @@ import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { createExercise, getExercises } from "../lib/api";
+import { createExercise, ensureUserExercises } from "../lib/api";
 import { WorkoutsStackParamList } from "../types/navigation";
 
 type Exercise = {
@@ -57,7 +57,7 @@ export default function ChooseExerciseScreen({
 
     (async () => {
       try {
-        const data = await getExercises();
+        const data = await ensureUserExercises();
         if (!active) return;
         setExercises(data.map(toExercise));
         setError(null);

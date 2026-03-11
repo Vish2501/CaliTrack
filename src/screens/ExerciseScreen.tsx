@@ -12,8 +12,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import {
   createExercise,
   deleteExercise,
+  ensureUserExercises,
   ExerciseResponse,
-  getExercises,
 } from "../lib/api";
 
 export default function ExercisesScreen() {
@@ -31,7 +31,7 @@ export default function ExercisesScreen() {
       (async () => {
         try {
           setLoading(true);
-          const data = await getExercises();
+          const data = await ensureUserExercises();
           if (!active) return;
           setExercises(data);
           setError(null);
