@@ -84,7 +84,9 @@ export default function WorkoutsScreen() {
     setActiveWorkoutUI((prev) => ({
       ...prev,
       selectedExercise: normalizedExercise,
-      entries: prev.entries.some((entry) => String(entry.id) === normalizedExercise.id)
+      entries: prev.entries.some(
+        (entry) => String(entry.id) === normalizedExercise.id,
+      )
         ? prev.entries
         : [
             ...prev.entries,
@@ -162,8 +164,6 @@ export default function WorkoutsScreen() {
             </Pressable>
           )}
         />
-
-        {/* Previous workouts list hidden for now */}
       </SafeAreaView>
 
       <ActiveWorkoutModal

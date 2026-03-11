@@ -1,16 +1,9 @@
-import React, { useMemo, useState, useEffect } from "react";
-import {
-  FlatList,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { supabase } from "../lib/supabase";
+import React, { useEffect, useMemo, useState } from "react";
+import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { createExercise, getExercises } from "../lib/api";
 import { WorkoutsStackParamList } from "../types/navigation";
 
 type Exercise = {
@@ -25,11 +18,15 @@ type Props = {
   onClose?: () => void;
 };
 
-const EXERCISES: Exercise[] = [
-  { id: "1", name: "Push-up", category: "Bodyweight" },
-  { id: "2", name: "Squat", category: "Legs" },
-  { id: "3", name: "Bench Press", category: "Chest" },
-];
+const toExercise = (exercise: {
+  id: number;
+  name: string;
+  category: string | null;
+}): Exercise => ({
+  id: String(exercise.id),
+  name: exercise.name,
+  category: exercise.category ?? "Uncategorized",
+});
 
 export default function ChooseExerciseScreen({
   embedded = false,
@@ -38,79 +35,42 @@ export default function ChooseExerciseScreen({
 }: Props) {
   const [query, setQuery] = useState("");
   const insets = useSafeAreaInsets();
-  const [exercises, setExercises] = useState(EXERCISES);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("");
-  const BASE_URL = "http://localhost:8080";
   const navigation =
     useNavigation<NativeStackNavigationProp<WorkoutsStackParamList>>();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return exercises;
-    return exercises.filter((e) => e.name.toLowerCase().includes(q));
+    return exercises.filter((exercise) =>
+      exercise.name.toLowerCase().includes(q),
+    );
   }, [query, exercises]);
-  const createExercise = async (name: string, category: string) => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) throw new Error("No session");
-
-    const res = await fetch(`${BASE_URL}/api/exercises`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, category }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text);
-    }
-
-    return res.json();
-  };
-
-  const fetchExercises = async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) throw new Error("No session");
-
-    const res = await fetch(`${BASE_URL}/api/exercises`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text);
-    }
-
-    return res.json();
-  };
 
   useEffect(() => {
     let active = true;
+
     (async () => {
       try {
-        const data = await fetchExercises();
+        const data = await getExercises();
         if (!active) return;
-        setExercises(data);
+        setExercises(data.map(toExercise));
         setError(null);
       } catch (err) {
         if (!active) return;
         setError(
-          err instanceof Error ? err.message : "Failed to load exercises"
+          err instanceof Error ? err.message : "Failed to load exercises",
         );
       } finally {
         if (active) setLoading(false);
       }
     })();
+
     return () => {
       active = false;
     };
@@ -122,7 +82,9 @@ export default function ChooseExerciseScreen({
         style={{ paddingTop: embedded ? 12 : insets.top + 12 }}
         className="px-5 pb-2 flex-row items-center justify-between"
       >
-        <Text className="text-2xl font-bold text-[#eff6e0]">Choose Exercise</Text>
+        <Text className="text-2xl font-bold text-[#eff6e0]">
+          Choose Exercise
+        </Text>
         <View className="flex-row items-center gap-2">
           {embedded && (
             <Pressable
@@ -140,6 +102,7 @@ export default function ChooseExerciseScreen({
           </Pressable>
         </View>
       </View>
+
       {showForm && (
         <View className="px-5 gap-2 mb-2">
           <TextInput
@@ -160,11 +123,11 @@ export default function ChooseExerciseScreen({
             className="bg-[#598392] py-2.5 rounded-xl items-center"
             onPress={async () => {
               if (!newName.trim()) return;
-              const created = await createExercise(
-                newName.trim(),
-                newCategory.trim() || "Uncategorized"
-              );
-              setExercises((prev) => [created, ...prev]);
+              const created = await createExercise({
+                name: newName.trim(),
+                category: newCategory.trim() || "Uncategorized",
+              });
+              setExercises((prev) => [toExercise(created), ...prev]);
               setNewName("");
               setNewCategory("");
               setShowForm(false);

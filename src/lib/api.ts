@@ -54,6 +54,38 @@ export type WorkoutDetailsResponse = WorkoutResponse & {
   sets: SetResponse[];
 };
 
+export async function getWorkouts() {
+  const res = await fetch(`${BASE_URL}/api/workouts`, {
+    headers: await authHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+
+  return (await res.json()) as WorkoutResponse[];
+}
+
+export type WorkoutFrequencyResponse = {
+  weekStart: string;
+  workoutCount: number;
+};
+
+export async function getWorkoutFrequency(start: string, end: string) {
+  const res = await fetch(
+    `${BASE_URL}/api/analytics/workout-frequency?start=${start}&end=${end}`,
+    {
+      headers: await authHeaders(),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+
+  return (await res.json()) as WorkoutFrequencyResponse[];
+}
+
 async function authHeaders(includeJson = false) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -124,4 +156,51 @@ export async function finishWorkout(workoutId: number) {
   }
 
   return (await res.json()) as WorkoutResponse;
+}
+
+export type ExerciseResponse = {
+  id: number;
+  name: string;
+  category: string | null;
+  userId: string;
+};
+
+export async function getExercises() {
+  const res = await fetch(`${BASE_URL}/api/exercises`, {
+    headers: await authHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+
+  return (await res.json()) as ExerciseResponse[];
+}
+
+export async function createExercise(payload: {
+  name: string;
+  category: string;
+}) {
+  const res = await fetch(`${BASE_URL}/api/exercises`, {
+    method: "POST",
+    headers: await authHeaders(true),
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+
+  return (await res.json()) as ExerciseResponse;
+}
+
+export async function deleteExercise(exerciseId: number) {
+  const res = await fetch(`${BASE_URL}/api/exercises/${exerciseId}`, {
+    method: "DELETE",
+    headers: await authHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
 }

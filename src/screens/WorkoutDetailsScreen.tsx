@@ -38,11 +38,23 @@ export default function WorkoutDetailScreen({
   const selectedExercise =
     selectedExerciseProp ?? route.params?.selectedExercise ?? null;
   const [loadingWorkout, setLoadingWorkout] = useState(false);
+  const [localEntries, setLocalEntries] = useState<ExerciseEntry[]>([]);
 
   const resolvedWorkout = workout ?? {
     id: Number(route.params?.workoutId ?? 0),
     name: "Workout",
     date: "Today",
+  };
+
+  const isReadOnly = !embedded;
+  const displayedEntries = embedded ? entries : localEntries;
+
+  const updateEntries = (nextEntries: ExerciseEntry[]) => {
+    if (embedded) {
+      onEntriesChange(nextEntries);
+    } else {
+      setLocalEntries(nextEntries);
+    }
   };
 
   useEffect(() => {
@@ -80,18 +92,21 @@ export default function WorkoutDetailScreen({
 
         const serverEntries = Array.from(grouped.values());
         if (serverEntries.length > 0) {
-          const merged = [...entries];
+          const merged = [...displayedEntries];
           for (const serverEntry of serverEntries) {
             const existingIndex = merged.findIndex(
               (entry) => String(entry.id) === String(serverEntry.id),
             );
             if (existingIndex >= 0) {
-              merged[existingIndex] = { ...merged[existingIndex], ...serverEntry };
+              merged[existingIndex] = {
+                ...merged[existingIndex],
+                ...serverEntry,
+              };
             } else {
               merged.push(serverEntry);
             }
           }
-          onEntriesChange(merged);
+          updateEntries(merged);
         }
       } catch (error) {
         if (!active) return;
@@ -117,8 +132,8 @@ export default function WorkoutDetailScreen({
     field: "reps" | "weight",
     value: string,
   ) => {
-    onEntriesChange(
-      entries.map((entry) =>
+    updateEntries(
+      displayedEntries.map((entry) =>
         String(entry.id) === String(exerciseId)
           ? {
               ...entry,
@@ -132,8 +147,8 @@ export default function WorkoutDetailScreen({
   };
 
   const toggleSetCompleted = (exerciseId: string, setIndex: number) => {
-    onEntriesChange(
-      entries.map((entry) =>
+    updateEntries(
+      displayedEntries.map((entry) =>
         String(entry.id) === String(exerciseId)
           ? {
               ...entry,
@@ -149,15 +164,12 @@ export default function WorkoutDetailScreen({
   };
 
   const addLocalSet = (exerciseId: string) => {
-    onEntriesChange(
-      entries.map((entry) =>
+    updateEntries(
+      displayedEntries.map((entry) =>
         String(entry.id) === String(exerciseId)
           ? {
               ...entry,
-              sets: [
-                ...entry.sets,
-                { reps: "", weight: "", completed: false },
-              ],
+              sets: [...entry.sets, { reps: "", weight: "", completed: false }],
             }
           : entry,
       ),
@@ -216,7 +228,7 @@ export default function WorkoutDetailScreen({
             Loading workout...
           </Text>
         </View>
-      ) : entries.length === 0 ? (
+      ) : displayedEntries.length === 0 ? (
         <View className="flex-1 items-center justify-center gap-1.5">
           <Text className="text-base font-semibold text-[#eff6e0]">
             No sets yet
@@ -227,8 +239,11 @@ export default function WorkoutDetailScreen({
         </View>
       ) : (
         <View className="flex-1 gap-4">
-          {entries.map((exercise) => (
-            <View key={String(exercise.id)} className="bg-[#01161e] rounded-xl p-4">
+          {displayedEntries.map((exercise) => (
+            <View
+              key={String(exercise.id)}
+              className="bg-[#01161e] rounded-xl p-4"
+            >
               <Text className="text-base font-bold text-[#eff6e0]">
                 {exercise.name}
               </Text>
@@ -247,6 +262,7 @@ export default function WorkoutDetailScreen({
                     placeholderTextColor="#aec3b0"
                     value={set.weight}
                     keyboardType="numeric"
+                    editable={!isReadOnly}
                     onChangeText={(value) =>
                       updateSetField(exercise.id, index, "weight", value)
                     }
@@ -256,48 +272,55 @@ export default function WorkoutDetailScreen({
                     placeholder="reps"
                     placeholderTextColor="#aec3b0"
                     value={set.reps}
+                    editable={!isReadOnly}
                     keyboardType="numeric"
                     onChangeText={(value) =>
                       updateSetField(exercise.id, index, "reps", value)
                     }
                     className="flex-1 bg-[#124559] text-[#eff6e0] px-3 py-2 rounded-lg"
                   />
-                  <Pressable
-                    className={`px-3 py-2 rounded-lg ${set.completed ? "bg-[#eff6e0]" : "bg-[#598392]"}`}
-                    onPress={() => toggleSetCompleted(exercise.id, index)}
-                  >
-                    <Ionicons
-                      name="checkmark"
-                      size={16}
-                      color={set.completed ? "#01161e" : "#eff6e0"}
-                    />
-                  </Pressable>
+                  {!isReadOnly && (
+                    <Pressable
+                      className={`px-3 py-2 rounded-lg ${set.completed ? "bg-[#eff6e0]" : "bg-[#598392]"}`}
+                      onPress={() => toggleSetCompleted(exercise.id, index)}
+                    >
+                      <Ionicons
+                        name="checkmark"
+                        size={16}
+                        color={set.completed ? "#01161e" : "#eff6e0"}
+                      />
+                    </Pressable>
+                  )}
                 </View>
               ))}
 
-              <Pressable
-                className="mt-2 bg-[#598392] py-2 rounded-lg items-center"
-                onPress={() => addLocalSet(exercise.id)}
-              >
-                <Text className="text-[#01161e] font-bold">Add Set</Text>
-              </Pressable>
+              {!isReadOnly && (
+                <Pressable
+                  className="mt-2 bg-[#598392] py-2 rounded-lg items-center"
+                  onPress={() => addLocalSet(exercise.id)}
+                >
+                  <Text className="text-[#01161e] font-bold">Add Set</Text>
+                </Pressable>
+              )}
             </View>
           ))}
         </View>
       )}
 
-      <Pressable
-        className="bg-[#598392] py-3 rounded-xl items-center"
-        onPress={() => {
-          if (embedded && onAddExercise) {
-            onAddExercise();
-            return;
-          }
-          navigation.navigate("ChooseExercise");
-        }}
-      >
-        <Text className="text-[#01161e] font-bold">Add Exercise</Text>
-      </Pressable>
+      {!isReadOnly && (
+        <Pressable
+          className="bg-[#598392] py-3 rounded-xl items-center"
+          onPress={() => {
+            if (embedded && onAddExercise) {
+              onAddExercise();
+              return;
+            }
+            navigation.navigate("ChooseExercise");
+          }}
+        >
+          <Text className="text-[#01161e] font-bold">Add Exercise</Text>
+        </Pressable>
+      )}
     </SafeAreaView>
   );
 }

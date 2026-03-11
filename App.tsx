@@ -10,6 +10,7 @@ import WorkoutScreen from "./src/screens/WorkoutScreen";
 import ExerciseScreen from "./src/screens/ExerciseScreen";
 import AnalyticsScreen from "./src/screens/AnalyticsScreen";
 import LoginScreen from "./src/screens/LoginScreen";
+import HistoryScreen from "./src/screens/HistoryScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import WorkoutDetailScreen from "./src/screens/WorkoutDetailsScreen";
 import ChooseExerciseScreen from "./src/screens/ChooseExerciseScreen";
@@ -17,6 +18,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const Tab = createBottomTabNavigator();
 const WorkoutsStack = createNativeStackNavigator();
+const HistoryStack = createNativeStackNavigator();
 
 function WorkoutsStackScreen() {
   return (
@@ -40,6 +42,23 @@ function WorkoutsStackScreen() {
   );
 }
 
+function HistoryStackScreen() {
+  return (
+    <HistoryStack.Navigator>
+      <HistoryStack.Screen
+        name="WorkoutsHome"
+        component={HistoryScreen}
+        options={{ headerShown: false }}
+      />
+      <HistoryStack.Screen
+        name="WorkoutDetail"
+        component={WorkoutDetailScreen}
+        options={{ headerShown: false }}
+      />
+    </HistoryStack.Navigator>
+  );
+}
+
 function Tabs() {
   return (
     <Tab.Navigator
@@ -54,6 +73,7 @@ function Tabs() {
       }}
     >
       <Tab.Screen name="Workouts" component={WorkoutsStackScreen} />
+      <Tab.Screen name="History" component={HistoryStackScreen} />
       <Tab.Screen name="Exercises" component={ExerciseScreen} />
       <Tab.Screen name="Analytics" component={AnalyticsScreen} />
     </Tab.Navigator>
