@@ -80,10 +80,12 @@ export default function WorkoutsScreen() {
   }, []);
 
   const selectExercise = useCallback((exercise: Exercise) => {
+    // Normalize IDs as strings because the local workout UI stores entry IDs as strings.
     const normalizedExercise = { ...exercise, id: String(exercise.id) };
     setActiveWorkoutUI((prev) => ({
       ...prev,
       selectedExercise: normalizedExercise,
+      // Keep one entry per exercise; selecting an existing exercise reuses its current sets.
       entries: prev.entries.some(
         (entry) => String(entry.id) === normalizedExercise.id,
       )
@@ -176,7 +178,7 @@ export default function WorkoutsScreen() {
       />
       {activeWorkoutUI.isMinimized && activeWorkoutUI.workout && (
         <Pressable
-          className="absolute bottom-24 left-4 right-4 bg-[#01161e] border border-[#aec3b0] rounded-2xl px-4 py-3 flex-row items-center justify-between"
+          className="absolute bottom-5 left-4 right-4 bg-[#01161e] border border-[#aec3b0] rounded-2xl px-4 py-3 flex-row items-center justify-between"
           onPress={() => {
             setActiveWorkoutUI((prev) => ({
               ...prev,

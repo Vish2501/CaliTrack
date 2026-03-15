@@ -11,10 +11,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   createExercise,
-  deleteExercise,
   ensureUserExercises,
   ExerciseResponse,
 } from "../lib/api";
+import { trackProductEvent } from "../lib/telemetry";
 
 export default function ExercisesScreen() {
   const [exercises, setExercises] = useState<ExerciseResponse[]>([]);
@@ -59,6 +59,7 @@ export default function ExercisesScreen() {
         name: name.trim(),
         category: category.trim() || "Uncategorized",
       });
+      trackProductEvent("exercise_created");
 
       setExercises((prev) => [created, ...prev]);
       setName("");
@@ -68,20 +69,6 @@ export default function ExercisesScreen() {
       Alert.alert(
         "Create failed",
         err instanceof Error ? err.message : "Could not create exercise",
-      );
-    }
-  };
-
-  const handleDelete = async (exerciseId: number) => {
-    try {
-      await deleteExercise(exerciseId);
-      setExercises((prev) =>
-        prev.filter((exercise) => exercise.id !== exerciseId),
-      );
-    } catch (err) {
-      Alert.alert(
-        "Delete failed",
-        err instanceof Error ? err.message : "Could not delete exercise",
       );
     }
   };
@@ -96,14 +83,16 @@ export default function ExercisesScreen() {
           </Text>
         </View>
 
-        <Pressable
-          className="bg-[#598392] px-4 py-2 rounded-full"
-          onPress={() => setShowForm((prev) => !prev)}
-        >
-          <Text className="text-[#01161e] font-bold">
-            {showForm ? "Close" : "New"}
-          </Text>
-        </Pressable>
+        <View className="flex-row items-center gap-2">
+          <Pressable
+            className="bg-[#598392] px-4 py-2 rounded-full"
+            onPress={() => setShowForm((prev) => !prev)}
+          >
+            <Text className="text-[#01161e] font-bold">
+              {showForm ? "Close" : "New"}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {showForm && (
@@ -162,22 +151,6 @@ export default function ExercisesScreen() {
                     {item.category ?? "Uncategorized"}
                   </Text>
                 </View>
-
-                <Pressable
-                  onPress={() =>
-                    Alert.alert("Delete exercise", item.name, [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: () => handleDelete(item.id),
-                      },
-                    ])
-                  }
-                  className="bg-[#01161e] px-3 py-2 rounded-lg"
-                >
-                  <Text className="text-[#eff6e0] font-semibold">Delete</Text>
-                </Pressable>
               </View>
             </View>
           )}

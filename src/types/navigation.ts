@@ -12,3 +12,8 @@ export type WorkoutsStackParamList = {
     | undefined;
   ChooseExercise: undefined;
 };
+
+export type ProfileStackParamList = {
+  ProfileHome: undefined;
+  Metrics: undefined;
+};

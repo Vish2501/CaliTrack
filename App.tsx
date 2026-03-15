@@ -3,12 +3,14 @@ import "./global.css";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "./src/lib/supabase";
 import { COLORS } from "./src/theme/colors";
 
 import WorkoutScreen from "./src/screens/WorkoutScreen";
 import ExerciseScreen from "./src/screens/ExerciseScreen";
-import AnalyticsScreen from "./src/screens/AnalyticsScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+import MetricsScreen from "./src/screens/MetricsScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import HistoryScreen from "./src/screens/HistoryScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -17,8 +19,26 @@ import ChooseExerciseScreen from "./src/screens/ChooseExerciseScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const Tab = createBottomTabNavigator();
+const ProfileStack = createNativeStackNavigator();
 const WorkoutsStack = createNativeStackNavigator();
 const HistoryStack = createNativeStackNavigator();
+
+function ProfileStackScreen() {
+  return (
+    <ProfileStack.Navigator>
+      <ProfileStack.Screen
+        name="ProfileHome"
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <ProfileStack.Screen
+        name="Metrics"
+        component={MetricsScreen}
+        options={{ headerShown: false }}
+      />
+    </ProfileStack.Navigator>
+  );
+}
 
 function WorkoutsStackScreen() {
   return (
@@ -62,7 +82,7 @@ function HistoryStackScreen() {
 function Tabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
           backgroundColor: COLORS.prussianBlue,
@@ -70,12 +90,22 @@ function Tabs() {
         },
         tabBarActiveTintColor: COLORS.orange,
         tabBarInactiveTintColor: COLORS.alabaster,
-      }}
+        tabBarIcon: ({ color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = "ellipse";
+
+          if (route.name === "Profile") iconName = "person-circle-outline";
+          if (route.name === "History") iconName = "time-outline";
+          if (route.name === "Workouts") iconName = "barbell-outline";
+          if (route.name === "Exercises") iconName = "list-outline";
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
     >
-      <Tab.Screen name="Workouts" component={WorkoutsStackScreen} />
+      <Tab.Screen name="Profile" component={ProfileStackScreen} />
       <Tab.Screen name="History" component={HistoryStackScreen} />
+      <Tab.Screen name="Workouts" component={WorkoutsStackScreen} />
       <Tab.Screen name="Exercises" component={ExerciseScreen} />
-      <Tab.Screen name="Analytics" component={AnalyticsScreen} />
     </Tab.Navigator>
   );
 }

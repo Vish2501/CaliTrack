@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -238,7 +238,7 @@ export default function WorkoutDetailScreen({
           </Text>
         </View>
       ) : (
-        <View className="flex-1 gap-4">
+        <ScrollView className="flex-1" contentContainerClassName="gap-4 pb-4">
           {displayedEntries.map((exercise) => (
             <View
               key={String(exercise.id)}
@@ -304,7 +304,7 @@ export default function WorkoutDetailScreen({
               )}
             </View>
           ))}
-        </View>
+        </ScrollView>
       )}
 
       {!isReadOnly && (
