@@ -1,46 +1,61 @@
 # CaliTrack Mobile
 
-Expo / React Native mobile app for `CaliTrack`, a workout tracker inspired by Hevy and Strong.
+Mobile workout tracker built with Expo + React Native, inspired by Strong/Hevy workflows.
 
-## Stack
+This app focuses on fast workout logging, exercise library management, workout history, and simple profile insights.
 
-- React Native
-- Expo
+## Demo Scope (Portfolio)
+
+Current implemented flow:
+
+- Login with Supabase email/password auth
+- Start a workout and manage an active workout state
+- Add exercises and record sets (reps/weight/completed)
+- Finish workouts and sync to backend
+- Browse completed workout history and open workout details
+- Manage personal exercise library (add + view)
+- View profile insights (weekly workout frequency for the last 4 weeks)
+- Log out from Profile
+
+Tab order in app:
+
+1. Profile
+2. History
+3. Workouts
+4. Exercises
+
+## Tech Stack
+
+- React Native 0.83
+- Expo 55
 - TypeScript
-- React Navigation
-- Supabase Auth
-- NativeWind
+- React Navigation (bottom tabs + native stack)
+- Supabase Auth (`@supabase/supabase-js`)
+- NativeWind (Tailwind-style RN styling)
+- `@gorhom/bottom-sheet` for workout interaction UI
 
-## Current Features
+## Architecture Notes
 
-- Supabase email/password login
-- Workout start flow connected to backend
-- Active workout modal
-- Add exercises to an active workout
-- Local draft sets with reps / weight inputs
-- Checkmark-based set completion flow
-- Finish workout sync to backend
+- Frontend: Expo React Native app (this repository)
+- Auth: Supabase session-based authentication
+- API: Mobile app calls a backend API (`src/lib/api.ts`)
+- Backend base URL default: `http://localhost:8080`
 
-## App Structure
+Primary API areas used:
 
-```text
-src/
-├── components/    # Reusable UI pieces
-├── lib/           # API and Supabase helpers
-├── screens/       # App screens
-├── theme/         # Shared theme values
-└── types/         # Shared TypeScript types
-```
+- `workouts` (start, list, details, finish, set logging)
+- `exercises` (list/create, plus initial seed behavior)
+- `analytics/workout-frequency` (profile insights)
 
-## Running Locally
+## Local Setup
 
 ### Prerequisites
 
-- Node 20+
+- Node.js 20+
 - npm
-- Expo CLI via `npx expo`
-- iOS Simulator or Expo Go
-- Backend running locally on port `8080`
+- Expo (via `npx expo`)
+- iOS Simulator / Android Emulator / Expo Go
+- Backend API running locally
 
 ### Install
 
@@ -48,36 +63,75 @@ src/
 npm install
 ```
 
-### Start the app
+### Run
 
 ```bash
 npx expo start
 ```
 
-## Backend Dependency
+Useful commands:
 
-The mobile app currently expects the backend API at:
-
-```text
-http://localhost:8080
+```bash
+npx expo start --ios
+npx expo start --android
+npx tsc --noEmit
 ```
 
-If testing on a physical device, replace localhost with your machine's local IP.
+## Configuration
 
-## Auth
+### API Base URL
 
-The app uses Supabase Auth for login and stores the session locally.
+Configured in [`src/lib/api.ts`](src/lib/api.ts):
 
-Required values live in the Supabase client config used by the app.
+```ts
+const BASE_URL = "http://localhost:8080";
+```
 
-## Status
+For physical devices, use your machine LAN IP instead of `localhost`.
 
-This project is in active development.
+### Supabase
 
-Current focus:
+Supabase client is configured in [`src/lib/supabase.ts`](src/lib/supabase.ts).
 
-- refining workout UX
-- template workflow
-- workout draft persistence
-- analytics integration
-- stronger parity with Hevy / Strong flows
+For production hardening, move keys/URLs into environment-based config and avoid hardcoding.
+
+## Project Structure
+
+```text
+src/
+├── components/   # Reusable UI (active workout modal)
+├── lib/          # API + Supabase client
+├── screens/      # Login, Profile, History, Workouts, Exercises, Details
+├── theme/        # Color system
+└── types/        # Shared TS types (navigation + workout domain)
+```
+
+## Roadmap
+
+- Template CRUD and better template editing UX
+- Persistent workout drafts across app restarts
+- Richer profile insights (volume, streaks, PR trends)
+- AI coach flow (chat + suggested workouts/templates) via backend integration
+- Test coverage for core data flows
+
+## Screenshots
+
+Add your screenshots to `assets/screenshots/` using the filenames below.
+
+### Login
+![Login screen](assets/screenshots/login.png)
+
+### Workouts
+![Workouts screen](assets/screenshots/workouts.png)
+
+### History
+![History screen](assets/screenshots/history.png)
+
+### Workout Details
+![Workout details screen](assets/screenshots/workout_details.png)
+
+### Exercises
+![Exercises screen](assets/screenshots/exercise.png)
+
+### Profile
+![Profile screen](assets/screenshots/profile.png)
