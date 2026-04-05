@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { getWorkoutDetails } from "../lib/api";
+import { getWeightUnitPreference, WeightUnit } from "../lib/preferences";
 import { WorkoutsStackParamList } from "../types/navigation";
 import { Exercise, ExerciseEntry, Workout } from "../types/workout";
 
@@ -39,6 +40,7 @@ export default function WorkoutDetailScreen({
     selectedExerciseProp ?? route.params?.selectedExercise ?? null;
   const [loadingWorkout, setLoadingWorkout] = useState(false);
   const [localEntries, setLocalEntries] = useState<ExerciseEntry[]>([]);
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
 
   const resolvedWorkout = workout ?? {
     id: Number(route.params?.workoutId ?? 0),
@@ -125,6 +127,22 @@ export default function WorkoutDetailScreen({
       active = false;
     };
   }, [resolvedWorkout.id]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+
+      (async () => {
+        const preferredUnit = await getWeightUnitPreference();
+        if (!active) return;
+        setWeightUnit(preferredUnit);
+      })();
+
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const updateSetField = (
     exerciseId: string,
@@ -258,7 +276,7 @@ export default function WorkoutDetailScreen({
                 >
                   <Text className="text-[#aec3b0] w-6">{index + 1}</Text>
                   <TextInput
-                    placeholder="kg"
+                    placeholder={weightUnit}
                     placeholderTextColor="#aec3b0"
                     value={set.weight}
                     keyboardType="numeric"

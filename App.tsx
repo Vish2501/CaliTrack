@@ -11,6 +11,7 @@ import WorkoutScreen from "./src/screens/WorkoutScreen";
 import ExerciseScreen from "./src/screens/ExerciseScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import MetricsScreen from "./src/screens/MetricsScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import HistoryScreen from "./src/screens/HistoryScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -34,6 +35,11 @@ function ProfileStackScreen() {
       <ProfileStack.Screen
         name="Metrics"
         component={MetricsScreen}
+        options={{ headerShown: false }}
+      />
+      <ProfileStack.Screen
+        name="Settings"
+        component={SettingsScreen}
         options={{ headerShown: false }}
       />
     </ProfileStack.Navigator>

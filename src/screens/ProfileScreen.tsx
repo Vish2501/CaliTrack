@@ -1,9 +1,11 @@
 import React, { useCallback, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { getWorkoutFrequency, WorkoutFrequencyResponse } from "../lib/api";
 import { supabase } from "../lib/supabase";
+import { ProfileStackParamList } from "../types/navigation";
 
 function getWeekStart(date: Date) {
   const value = new Date(date);
@@ -19,6 +21,8 @@ function toIsoDate(date: Date) {
 }
 
 export default function ProfileScreen() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const [data, setData] = useState<WorkoutFrequencyResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,12 +121,20 @@ export default function ProfileScreen() {
             Account and training insights
           </Text>
         </View>
-        <Pressable
-          className="bg-[#01161e] px-4 py-2 rounded-full"
-          onPress={handleLogout}
-        >
-          <Text className="text-[#eff6e0] font-bold">Log Out</Text>
-        </Pressable>
+        <View className="items-end gap-2">
+          <Pressable
+            className="bg-[#598392] px-4 py-2 rounded-full"
+            onPress={() => navigation.navigate("Settings")}
+          >
+            <Text className="text-[#01161e] font-bold">Settings</Text>
+          </Pressable>
+          <Pressable
+            className="bg-[#01161e] px-4 py-2 rounded-full"
+            onPress={handleLogout}
+          >
+            <Text className="text-[#eff6e0] font-bold">Log Out</Text>
+          </Pressable>
+        </View>
       </View>
       <View className="px-5 pb-2">
         <Text className="mt-1 text-lg font-bold text-[#eff6e0]">
