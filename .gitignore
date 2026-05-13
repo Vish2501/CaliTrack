@@ -1,0 +1,19 @@
+.DS_Store
+*.log
+
+# Backend
+backend/target/
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Local environment
+.env
+.env.local
