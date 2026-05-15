@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import { trackApiTiming, trackProductEvent } from "./telemetry";
 
 const BASE_URL = "http://localhost:8080";
+const API_V1 = `${API_V1}/v1`;
 
 const DEFAULT_EXERCISES = [
   { name: "Push-Up", category: "Chest" },
@@ -60,6 +61,12 @@ export type ExerciseResponse = {
   userId: string;
 };
 
+export type CoachRecommendationResponse = {
+  recommendation: string;
+  focusArea: string;
+  suggestedNextExercise: string;
+};
+
 async function authHeaders(includeJson = false) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -69,6 +76,19 @@ async function authHeaders(includeJson = false) {
     Authorization: `Bearer ${token}`,
     ...(includeJson ? { "Content-Type": "application/json" } : {}),
   };
+}
+
+async function parseApiError(res: Response): Promise<string> {
+  const text = await res.text();
+  if (!text) {
+    return `Request failed (${res.status})`;
+  }
+  try {
+    const body = JSON.parse(text) as { message?: string; error?: string };
+    return body.message ?? body.error ?? text;
+  } catch {
+    return text;
+  }
 }
 
 async function fetchWithTiming(
@@ -126,7 +146,7 @@ export async function commitWorkout(
 }
 
 export async function getWorkouts() {
-  const res = await fetchWithTiming("get_workouts", `${BASE_URL}/api/workouts`, {
+  const res = await fetchWithTiming("get_workouts", `${API_V1}/workouts`, {
     headers: await authHeaders(),
   });
 
@@ -140,7 +160,7 @@ export async function getWorkouts() {
 export async function getWorkoutFrequency(start: string, end: string) {
   const res = await fetchWithTiming(
     "get_workout_frequency",
-    `${BASE_URL}/api/analytics/workout-frequency?start=${start}&end=${end}`,
+    `${API_V1}/analytics/workout-frequency?start=${start}&end=${end}`,
     {
       headers: await authHeaders(),
     },
@@ -156,7 +176,7 @@ export async function getWorkoutFrequency(start: string, end: string) {
 export async function startWorkout() {
   const res = await fetchWithTiming(
     "start_workout",
-    `${BASE_URL}/api/workouts`,
+    `${API_V1}/workouts`,
     {
       method: "POST",
       headers: await authHeaders(),
@@ -175,7 +195,7 @@ export async function startWorkout() {
 export async function getWorkoutDetails(workoutId: number) {
   const res = await fetchWithTiming(
     "get_workout_details",
-    `${BASE_URL}/api/workouts/${workoutId}`,
+    `${API_V1}/workouts/${workoutId}`,
     {
       headers: await authHeaders(),
     },
@@ -199,7 +219,7 @@ export async function addWorkoutSet(
 ) {
   const res = await fetchWithTiming(
     "add_workout_set",
-    `${BASE_URL}/api/workouts/${workoutId}/sets`,
+    `${API_V1}/workouts/${workoutId}/sets`,
     {
       method: "POST",
       headers: await authHeaders(true),
@@ -217,7 +237,7 @@ export async function addWorkoutSet(
 export async function finishWorkout(workoutId: number) {
   const res = await fetchWithTiming(
     "finish_workout",
-    `${BASE_URL}/api/workouts/${workoutId}/finish`,
+    `${API_V1}/workouts/${workoutId}/finish`,
     {
       method: "PATCH",
       headers: await authHeaders(true),
@@ -233,7 +253,7 @@ export async function finishWorkout(workoutId: number) {
 }
 
 export async function getExercises() {
-  const res = await fetchWithTiming("get_exercises", `${BASE_URL}/api/exercises`, {
+  const res = await fetchWithTiming("get_exercises", `${API_V1}/exercises`, {
     headers: await authHeaders(),
   });
 
@@ -248,7 +268,7 @@ export async function createExercise(payload: {
   name: string;
   category: string;
 }) {
-  const res = await fetchWithTiming("create_exercise", `${BASE_URL}/api/exercises`, {
+  const res = await fetchWithTiming("create_exercise", `${API_V1}/exercises`, {
     method: "POST",
     headers: await authHeaders(true),
     body: JSON.stringify(payload),
@@ -264,7 +284,7 @@ export async function createExercise(payload: {
 export async function deleteExercise(exerciseId: number) {
   const res = await fetchWithTiming(
     "delete_exercise",
-    `${BASE_URL}/api/exercises/${exerciseId}`,
+    `${API_V1}/exercises/${exerciseId}`,
     {
       method: "DELETE",
       headers: await authHeaders(),
@@ -297,4 +317,23 @@ export async function ensureUserExercises() {
   }
 
   return [...existingExercises, ...createdExercises];
+}
+export async function getCoachRecommendation(
+  numWorkouts: number = 5,
+  userGoals: string = "general fitness",
+  fitnessLevel: string = "intermediate",
+) {
+  const res = await fetchWithTiming(
+    "get_coach_recommendation",
+    `${API_V1}/coach/recommend?numWorkouts=${numWorkouts}&userGoals=${encodeURIComponent(userGoals)}&fitnessLevel=${fitnessLevel}`,
+    {
+      headers: await authHeaders(),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseApiError(res));
+  }
+
+  return (await res.json()) as CoachRecommendationResponse;
 }

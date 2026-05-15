@@ -14,6 +14,10 @@ mobile/dist/
 .vscode/
 *.iml
 
-# Local environment
+# Local environment and secrets
 .env
-.env.local
+.env.*
+!.env.example
+backend/.env
+backend/application-local.yml
+**/application-local.yml

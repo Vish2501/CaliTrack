@@ -1,57 +1,50 @@
 # CaliTrack
 
-Full-stack fitness tracking app with a React Native mobile client and a Spring Boot backend.
+Full-stack fitness tracking app with a React Native mobile client and a versioned Spring Boot REST API.
+
+## CV summary (accurate to this repo)
+
+> **CaliTrack** — Full-stack workout tracker: Spring Boot 3 REST API (`/api/v1`, Repository/Service layer, stateless JWT via Supabase, normalised PostgreSQL schema) with React Native/Expo client; OpenAI-powered coaching recommendations (GPT-3.5); JUnit/Mockito unit tests and Testcontainers integration tests; Dockerised backend with Flyway migrations and GitHub Actions CI.
 
 ## Stack
 
-- React Native / Expo
-- TypeScript
-- Spring Boot 3
-- Java 17
-- PostgreSQL
-- Spring Data JPA
-- Spring Security
-- Supabase Auth
+- React Native / Expo + TypeScript
+- Spring Boot 3, Java 17, Spring Data JPA, Spring Security
+- PostgreSQL, Flyway
+- Supabase Auth (JWT)
+- OpenAI API (AI coach)
 
-## Project Structure
+## Project structure
 
 ```text
 CaliTrack/
-├── backend/   # Spring Boot API
-└── mobile/    # React Native / Expo app
+├── backend/          # Spring Boot API
+├── mobile/           # React Native / Expo app
+├── docker-compose.yml
+└── .github/workflows/
 ```
 
 ## Features
 
-- JWT-protected workout tracking API
-- Exercise CRUD
-- Workout creation and completion flow
-- Set create, update, and delete
-- Workout history and detail views
-- Analytics for volume, PRs, workout frequency, and profile insights
-- Mobile UI for workout logging and progress review
-- Persisted kg/lb unit preference
+- Versioned REST API under `/api/v1`
+- JWT-protected workouts, exercises, sets, analytics
+- OpenAI coaching recommendations from recent workout history
+- HTTP semantics: 201 Created, 204 No Content, consistent error responses
+- Unit + integration tests (Testcontainers / PostgreSQL)
 
-## Run Backend
+## Run locally
+
+### Backend
 
 ```bash
 cd backend
+cp .env.example .env   # add OPENAI_API_KEY for AI coach
 mvn spring-boot:run
 ```
 
-The backend runs on:
+API: `http://localhost:8080` — health check: `GET /health`
 
-```text
-http://localhost:8080
-```
-
-Configure PostgreSQL and Supabase JWT settings in:
-
-```text
-backend/src/main/resources/application.yml
-```
-
-## Run Mobile App
+### Mobile
 
 ```bash
 cd mobile
@@ -59,11 +52,37 @@ npm install
 npm start
 ```
 
-Then open the app with Expo Go or an emulator.
+Point the app at your API (`mobile/src/lib/api.ts` defaults to `http://localhost:8080`).
 
-## Repositories
+## Run with Docker
 
-This monorepo preserves the histories of the original backend and mobile repositories:
+Requires Docker Desktop and `OPENAI_API_KEY` in your shell (optional, for AI coach):
 
-- `CaliTrack-backend`
-- `CaliTrack-mobile`
+```bash
+export OPENAI_API_KEY=sk-...   # optional
+docker compose up --build
+```
+
+- API: `http://localhost:8080`
+- Postgres: `localhost:5432` (user/password/db: `calitrack`)
+
+## Tests
+
+```bash
+cd backend
+mvn test
+```
+
+Integration tests need Docker running (Testcontainers). Unit tests run without Docker.
+
+## Configuration
+
+| Variable | Purpose |
+|----------|---------|
+| `OPENAI_API_KEY` | AI coach (env or `backend/.env`) |
+| Supabase JWT settings | `backend/src/main/resources/application.yml` |
+| Database | Local Postgres or Docker Compose |
+
+## API versioning
+
+All resources live under **`/api/v1`** (e.g. `POST /api/v1/workouts`, `GET /api/v1/coach/recommend`).

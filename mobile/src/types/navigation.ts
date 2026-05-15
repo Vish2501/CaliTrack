@@ -17,4 +17,5 @@ export type ProfileStackParamList = {
   ProfileHome: undefined;
   Metrics: undefined;
   Settings: undefined;
+  Coach: undefined;
 };

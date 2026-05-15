@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/workouts/{workoutId}/sets")
+@RequestMapping("/api/v1/workouts/{workoutId}/sets")
 public class SetController {
 
     private final SetService setService;

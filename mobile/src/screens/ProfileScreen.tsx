@@ -124,6 +124,12 @@ export default function ProfileScreen() {
         <View className="items-end gap-2">
           <Pressable
             className="bg-[#598392] px-4 py-2 rounded-full"
+            onPress={() => navigation.navigate("Coach")}
+          >
+            <Text className="text-[#01161e] font-bold">AI Coach</Text>
+          </Pressable>
+          <Pressable
+            className="bg-[#598392] px-4 py-2 rounded-full"
             onPress={() => navigation.navigate("Settings")}
           >
             <Text className="text-[#01161e] font-bold">Settings</Text>

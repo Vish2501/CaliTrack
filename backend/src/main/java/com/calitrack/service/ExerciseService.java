@@ -2,7 +2,9 @@ package com.calitrack.service;
 
 import com.calitrack.entity.Exercise;
 import com.calitrack.repository.ExerciseRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -25,10 +27,10 @@ public class ExerciseService {
 
     public void deleteExercise(Long id, String userId) {
         Exercise ex = exerciseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Exercise not found"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise not found"));
 
         if (!ex.getUserId().equals(userId)) {
-            throw new RuntimeException("Forbidden");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
         }
 
         exerciseRepository.deleteById(id);

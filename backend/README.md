@@ -1,98 +1,91 @@
 # CaliTrack Backend
 
-Spring Boot backend for `CaliTrack`, a workout tracking app inspired by Hevy and Strong.
-
-## Stack
-
-- Java 17
-- Spring Boot 3
-- Spring Security
-- Spring Data JPA
-- PostgreSQL
-- Supabase Auth (JWT)
-- Maven
-
-## Current Features
-
-- JWT-protected REST API
-- Exercise CRUD
-- Workout creation and retrieval
-- Workout detail endpoint with sets
-- Set create, update, delete
-- Workout finish endpoint
-- Analytics endpoints for volume, PRs, and workout frequency
+Spring Boot 3 API for workout tracking with analytics and OpenAI-powered coaching.
 
 ## Architecture
 
-Project structure:
-
 ```text
 src/main/java/com/calitrack/
-├── config/        # Security and app configuration
-├── controller/    # REST controllers
-├── dto/           # Request / response DTOs
-├── entity/        # JPA entities
-├── projection/    # Analytics projections
-├── repository/    # Database access
-└── service/       # Business logic
+├── config/         # Security, JWT, RestTemplate
+├── controller/     # REST adapters (thin — no business logic)
+├── dto/            # Request/response records
+├── entity/         # JPA entities (normalised schema)
+├── exception/      # GlobalExceptionHandler
+├── projection/     # Analytics read models
+├── repository/     # Spring Data JPA
+└── service/        # Business logic (Repository/Service pattern)
 ```
 
-## Auth
+- **Stateless** JWT auth (`SessionCreationPolicy.STATELESS`)
+- **Versioned** endpoints: `/api/v1/**`
+- **Secrets** via environment / `backend/.env` — never committed
 
-This backend uses Supabase Auth for JWT issuance and Spring Security for JWT validation.
+## Database
 
-Protected endpoints live under `/api/**`.
+Normalised tables: `workouts`, `exercises`, `sets` (3NF-style separation).
 
-## Running Locally
+| Profile | Schema management |
+|---------|-------------------|
+| Local dev (default) | Hibernate `ddl-auto: update` |
+| Docker / prod | Flyway migrations + `ddl-auto: validate` |
 
-### Prerequisites
+Migrations: `src/main/resources/db/migration/`
 
-- Java 17+
-- Maven
-- PostgreSQL / Supabase database
-- Supabase project configured
+## API (`/api/v1`)
 
-### Environment / Config
+| Method | Path | Status |
+|--------|------|--------|
+| POST | `/workouts` | 201 |
+| GET | `/workouts`, `/workouts/{id}` | 200 |
+| PATCH | `/workouts/{id}/finish` | 200 |
+| GET/POST | `/exercises` | 200 / 201 |
+| DELETE | `/exercises/{id}` | 204 |
+| POST | `/workouts/{id}/sets` | 201 |
+| GET | `/coach/recommend` | 200 |
 
-Set your database and Supabase JWT values in `src/main/resources/application.yml` or environment variables, depending on your local setup.
+Public: `GET /health`
 
-Typical values used by the project:
+## AI coach
 
-- `SUPABASE_JWT_ISSUER`
-- `SUPABASE_JWT_AUDIENCE`
-- `SUPABASE_JWK_SET_URI`
+- `GET /api/v1/coach/recommend` — analyses recent workouts via **OpenAI GPT-3.5**
+- Set `OPENAI_API_KEY` in environment or `backend/.env`
 
-### Start the app
+## Run locally
 
 ```bash
+cp .env.example .env
 mvn spring-boot:run
 ```
 
-The API runs on:
+## Run with Docker
 
-```text
-http://localhost:8080
+From repo root:
+
+```bash
+docker compose up --build
 ```
 
-## Example Endpoints
+Uses profile `docker` (Flyway + Postgres container).
 
-- `POST /api/workouts`
-- `GET /api/workouts`
-- `GET /api/workouts/{id}`
-- `PATCH /api/workouts/{id}/finish`
-- `GET /api/exercises`
-- `POST /api/exercises`
-- `POST /api/workouts/{workoutId}/sets`
-- `PATCH /api/workouts/{workoutId}/sets/{setId}`
-- `DELETE /api/workouts/{workoutId}/sets/{setId}`
+## Tests
 
-## Status
+```bash
+mvn test
+```
 
-This project is in active development.
+- **Unit tests**: Mockito (`*ServiceTest`, `GlobalExceptionHandlerTest`)
+- **Integration tests**: `@SpringBootTest` + Testcontainers PostgreSQL (requires Docker)
 
-Current focus:
+## CI
 
-- improving workout flow
-- template support
-- frontend/backend integration
-- stronger validation and polish
+GitHub Actions: `.github/workflows/backend-ci.yml` runs `mvn test` on push/PR.
+
+## Config files
+
+| File | Use |
+|------|-----|
+| `application.yml` | Local defaults |
+| `application-docker.yml` | Docker Compose |
+| `application-prod.yml` | Production deploy |
+| `application-test.yml` | Test profile |
+| `.env.example` | Template for secrets |

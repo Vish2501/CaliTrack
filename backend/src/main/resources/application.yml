@@ -2,11 +2,18 @@ spring:
   application:
     name: calitrack-backend
 
+  # Load backend/.env locally (gitignored). Env vars still override file values.
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
     url: jdbc:postgresql://localhost:5432/calitrack
     username: postgres
     password: ""
     driver-class-name: org.postgresql.Driver
+
+  flyway:
+    enabled: false
 
   jpa:
     hibernate:
@@ -32,3 +39,6 @@ supabase:
     issuer: https://uzyjygnqzrfxgnijiufd.supabase.co/auth/v1
     audience: authenticated
     jwk-set-uri: https://uzyjygnqzrfxgnijiufd.supabase.co/auth/v1/.well-known/jwks.json
+# Secrets: set OPENAI_API_KEY in your environment or backend/.env (see .env.example)
+openai:
+  api-key: ${OPENAI_API_KEY:}

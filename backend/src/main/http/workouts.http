@@ -1,5 +1,5 @@
 ### Create a workout
-POST http://localhost:8080/api/workouts
+POST http://localhost:8080/api/v1/workouts
 Content-Type: application/json
 
 {
@@ -9,6 +9,42 @@ Content-Type: application/json
 }
 
 ### Get weekly volume
-GET http://localhost:8080/api/analytics/weekly-volume?weekStart=2026-01-27
+GET http://localhost:8080/api/v1/analytics/weekly-volume?weekStart=2026-01-27
 
+### Get AI Coaching Recommendation (auto-fetch recent workouts)
+GET http://localhost:8080/api/v1/coach/recommend?numWorkouts=5&userGoals=strength&fitnessLevel=intermediate
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
 
+### Get AI Coaching Recommendation (manual workout data)
+POST http://localhost:8080/api/v1/coach/recommend
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+{
+  "recentWorkouts": [
+    {
+      "date": "2026-05-15",
+      "exercises": [
+        {
+          "name": "Bench Press",
+          "category": "chest",
+          "totalSets": 4,
+          "averageReps": 8,
+          "averageWeight": 225,
+          "averageRPE": 8
+        },
+        {
+          "name": "Incline Dumbbell Press",
+          "category": "chest",
+          "totalSets": 3,
+          "averageReps": 10,
+          "averageWeight": 60,
+          "averageRPE": 7
+        }
+      ]
+    }
+  ],
+  "userGoals": "build muscle and increase strength",
+  "fitnessLevel": "intermediate"
+}

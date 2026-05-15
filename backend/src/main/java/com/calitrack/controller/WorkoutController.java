@@ -5,6 +5,7 @@ import com.calitrack.dto.UpdateWorkoutRequest;
 import com.calitrack.dto.WorkoutDetailsResponse;
 import com.calitrack.entity.Workout;
 import com.calitrack.service.WorkoutService;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/workouts")
+@RequestMapping("/api/v1/workouts")
 public class WorkoutController {
 
     private final WorkoutService workoutService;
@@ -22,6 +23,7 @@ public class WorkoutController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Workout startWorkout(@AuthenticationPrincipal Jwt jwt) {
         return workoutService.startWorkout(jwt.getSubject());
     }
