@@ -8,7 +8,7 @@ This app focuses on fast workout logging, exercise library management, workout h
 
 Current implemented flow:
 
-- Login with Supabase email/password auth
+- Sign in or register with Supabase email/password auth
 - Start a workout and manage an active workout state
 - Add exercises and record sets (reps/weight/completed)
 - Finish workouts and sync to backend
