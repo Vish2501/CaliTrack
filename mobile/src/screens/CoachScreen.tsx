@@ -8,10 +8,14 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getCoachRecommendation, CoachRecommendationResponse } from "../lib/api";
+import {
+  getCoachRecommendation,
+  CoachRecommendationResponse,
+} from "../lib/api";
 
 export default function CoachScreen() {
-  const [recommendation, setRecommendation] = useState<CoachRecommendationResponse | null>(null);
+  const [recommendation, setRecommendation] =
+    useState<CoachRecommendationResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [fitnessLevel, setFitnessLevel] = useState("intermediate");
   const [userGoals, setUserGoals] = useState("general fitness");
@@ -24,7 +28,7 @@ export default function CoachScreen() {
     } catch (error) {
       Alert.alert(
         "Error",
-        error instanceof Error ? error.message : "Failed to get recommendation"
+        error instanceof Error ? error.message : "Failed to get recommendation",
       );
     } finally {
       setLoading(false);
@@ -162,8 +166,8 @@ export default function CoachScreen() {
         {!recommendation && !loading && (
           <View className="mt-8 items-center">
             <Text className="text-gray-500 text-center">
-              Click "Get Recommendation" to see AI-powered coaching advice based on your
-              recent workouts
+              Click "Get Recommendation" to see AI-powered coaching advice based
+              on your recent workouts
             </Text>
           </View>
         )}

@@ -2,8 +2,8 @@ import { ExerciseEntry } from "../types/workout";
 import { supabase } from "./supabase";
 import { trackApiTiming, trackProductEvent } from "./telemetry";
 
-const BASE_URL = "http://localhost:8080";
-const API_V1 = `${API_V1}/v1`;
+const BASE_URL = "https://calitrack-api.onrender.com";
+const API_V1 = `${BASE_URL}/api/v1`;
 
 const DEFAULT_EXERCISES = [
   { name: "Push-Up", category: "Chest" },
@@ -174,14 +174,10 @@ export async function getWorkoutFrequency(start: string, end: string) {
 }
 
 export async function startWorkout() {
-  const res = await fetchWithTiming(
-    "start_workout",
-    `${API_V1}/workouts`,
-    {
-      method: "POST",
-      headers: await authHeaders(),
-    },
-  );
+  const res = await fetchWithTiming("start_workout", `${API_V1}/workouts`, {
+    method: "POST",
+    headers: await authHeaders(),
+  });
 
   if (!res.ok) {
     throw new Error(await res.text());

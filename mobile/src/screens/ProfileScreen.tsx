@@ -44,7 +44,9 @@ export default function ProfileScreen() {
   }
 
   const countByWeek = new Map(
-    data.map((item) => [item.weekStart.slice(0, 10), item.workoutCount] as const),
+    data.map(
+      (item) => [item.weekStart.slice(0, 10), item.workoutCount] as const,
+    ),
   );
   const chartData = weekStarts.map((weekStart) => ({
     weekStart,
@@ -168,7 +170,10 @@ export default function ProfileScreen() {
                 style={{ height: chartHeight, width: 24 }}
               >
                 {yAxisTicks.map((tick, index) => (
-                  <Text key={`${tick}-${index}`} className="text-[10px] text-[#124559]">
+                  <Text
+                    key={`${tick}-${index}`}
+                    className="text-[10px] text-[#124559]"
+                  >
                     {tick}
                   </Text>
                 ))}
@@ -203,7 +208,10 @@ export default function ProfileScreen() {
             </View>
             <View className="mt-2 flex-row items-center justify-around px-1">
               {chartData.map((item) => (
-                <Text key={item.weekStart} className="text-[10px] text-[#124559]">
+                <Text
+                  key={item.weekStart}
+                  className="text-[10px] text-[#124559]"
+                >
                   {formatWeekLabel(item.weekStart)}
                 </Text>
               ))}
