@@ -2,6 +2,7 @@ spring:
   application:
     name: calitrack-backend
 
+  # Load backend/.env locally (gitignored). Env vars still override file values.
   config:
     import: optional:file:.env[.properties]
 
@@ -20,11 +21,25 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
 server:
   port: ${PORT:8080}
 
+logging:
+  level:
+    root: INFO
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+supabase:
+  url: https://uzyjygnqzrfxgnijiufd.supabase.co
+  jwt:
+    issuer: https://uzyjygnqzrfxgnijiufd.supabase.co/auth/v1
+    audience: authenticated
+    jwk-set-uri: https://uzyjygnqzrfxgnijiufd.supabase.co/auth/v1/.well-known/jwks.json
+
+# Secrets: set OPENAI_API_KEY in your environment or backend/.env
 openai:
   api-key: ${OPENAI_API_KEY:}
