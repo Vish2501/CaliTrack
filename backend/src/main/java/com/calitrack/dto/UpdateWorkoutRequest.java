@@ -1,4 +1,8 @@
 package com.calitrack.dto;
 
-public record UpdateWorkoutRequest(String notes) {}
+import jakarta.validation.constraints.Size;
 
+public record UpdateWorkoutRequest(
+    @Size(max = 2000)
+    String notes
+) {}

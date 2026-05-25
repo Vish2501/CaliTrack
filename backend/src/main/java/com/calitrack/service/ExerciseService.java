@@ -1,5 +1,6 @@
 package com.calitrack.service;
 
+import com.calitrack.dto.CreateExerciseRequest;
 import com.calitrack.entity.Exercise;
 import com.calitrack.repository.ExerciseRepository;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,15 @@ public class ExerciseService {
     }
 
     public Exercise createExercise(Exercise exercise) {
+        return exerciseRepository.save(exercise);
+    }
+
+    public Exercise createExercise(CreateExerciseRequest request, String userId) {
+        Exercise exercise = new Exercise();
+        exercise.setName(request.getName().trim());
+        exercise.setCategory(request.getCategory() != null ? request.getCategory().trim() : null);
+        exercise.setUserId(userId);
+
         return exerciseRepository.save(exercise);
     }
 

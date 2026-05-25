@@ -2,6 +2,7 @@ package com.calitrack.controller;
 
 import com.calitrack.projection.WeeklyVolumeView;
 import com.calitrack.projection.WorkoutFrequencyView;
+import com.calitrack.service.CurrentUserService;
 import com.calitrack.service.AnalyticsService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,9 +18,11 @@ import java.util.List;
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
+    private final CurrentUserService currentUserService;
 
-    public AnalyticsController(AnalyticsService analyticsService) {
+    public AnalyticsController(AnalyticsService analyticsService, CurrentUserService currentUserService) {
         this.analyticsService = analyticsService;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping("/weekly-volume")
@@ -27,18 +30,18 @@ public class AnalyticsController {
             @RequestParam LocalDate weekStart,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        String userId = jwt.getSubject();
+        String userId = currentUserService.getUserId(jwt);
         return analyticsService.getWeeklyVolume(weekStart, userId);
     }
 
     @GetMapping("/prs/heaviest")
     public List<HeaviestPrView> heaviestPrs(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+        String userId = currentUserService.getUserId(jwt);
         return analyticsService.getHeaviestPrs(userId);
     }
     @GetMapping("/prs/best-set-volume")
     public List<SetVolumePrView> setMaxVolume(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+        String userId = currentUserService.getUserId(jwt);
         return analyticsService.getMaxSetVolume(userId);
     }
     @GetMapping("/workout-frequency")
@@ -47,7 +50,7 @@ public class AnalyticsController {
             @RequestParam LocalDate end,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        String userId = jwt.getSubject();
+        String userId = currentUserService.getUserId(jwt);
         return analyticsService.getWorkoutFrequency(start, end, userId);
     }
 

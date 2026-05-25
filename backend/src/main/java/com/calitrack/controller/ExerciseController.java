@@ -1,7 +1,10 @@
 package com.calitrack.controller;
 
+import com.calitrack.dto.CreateExerciseRequest;
 import com.calitrack.entity.Exercise;
+import com.calitrack.service.CurrentUserService;
 import com.calitrack.service.ExerciseService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -14,29 +17,32 @@ import java.util.List;
 public class ExerciseController {
 
     private final ExerciseService exerciseService;
+    private final CurrentUserService currentUserService;
 
-    public ExerciseController(ExerciseService exerciseService) {
+    public ExerciseController(ExerciseService exerciseService, CurrentUserService currentUserService) {
         this.exerciseService = exerciseService;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping
     public List<Exercise> getExercises(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+        String userId = currentUserService.getUserId(jwt);
         return exerciseService.getExercisesForUser(userId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Exercise createExercise(@RequestBody Exercise exercise, @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
-        exercise.setUserId(userId);
-        return exerciseService.createExercise(exercise);
+    public Exercise createExercise(
+            @Valid @RequestBody CreateExerciseRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return exerciseService.createExercise(request, currentUserService.getUserId(jwt));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteExercise(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+        String userId = currentUserService.getUserId(jwt);
         exerciseService.deleteExercise(id, userId);
     }
 }

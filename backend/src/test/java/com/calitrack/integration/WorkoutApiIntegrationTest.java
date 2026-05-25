@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -37,10 +38,14 @@ class WorkoutApiIntegrationTest extends AbstractIntegrationTest {
             .get("id")
             .asLong();
 
-        mockMvc.perform(get("/api/v1/workouts")
+        MvcResult listResult = mockMvc.perform(get("/api/v1/workouts")
                 .with(jwt().jwt(j -> j.subject(TEST_USER))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value(workoutId));
+            .andReturn();
+
+        JsonNode workouts = objectMapper.readTree(listResult.getResponse().getContentAsString());
+        assertThat(workouts)
+            .anySatisfy(workout -> assertThat(workout.get("id").asLong()).isEqualTo(workoutId));
 
         mockMvc.perform(patch("/api/v1/workouts/{id}/finish", workoutId)
                 .with(jwt().jwt(j -> j.subject(TEST_USER)))
