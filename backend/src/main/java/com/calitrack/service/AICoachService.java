@@ -2,6 +2,11 @@ package com.calitrack.service;
 
 import com.calitrack.dto.CoachRecommendationRequest;
 import com.calitrack.dto.CoachRecommendationResponse;
+import com.calitrack.entity.Exercise;
+import com.calitrack.entity.Set;
+import com.calitrack.entity.Workout;
+import com.calitrack.repository.ExerciseRepository;
+import com.calitrack.repository.SetRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -13,23 +18,57 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AICoachService {
 
     private final RestTemplate restTemplate;
+    private final WorkoutService workoutService;
+    private final SetRepository setRepository;
+    private final ExerciseRepository exerciseRepository;
     private final String openaiApiKey;
 
     private static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
     private static final String MODEL = "gpt-3.5-turbo";
+    private static final DateTimeFormatter WORKOUT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public AICoachService(RestTemplate restTemplate,
+            WorkoutService workoutService,
+            SetRepository setRepository,
+            ExerciseRepository exerciseRepository,
             @Value("${openai.api-key}") String openaiApiKey) {
         this.restTemplate = restTemplate;
+        this.workoutService = workoutService;
+        this.setRepository = setRepository;
+        this.exerciseRepository = exerciseRepository;
         this.openaiApiKey = openaiApiKey;
+    }
+
+    public CoachRecommendationResponse getAutoRecommendation(
+            String userId,
+            int numWorkouts,
+            String userGoals,
+            String fitnessLevel) {
+        List<CoachRecommendationRequest.WorkoutSummary> workoutSummaries = workoutService.getWorkoutsForUser(userId)
+                .stream()
+                .filter(workout -> workout.getEndTime() != null)
+                .sorted(Comparator.comparing(Workout::getEndTime).reversed())
+                .limit(numWorkouts)
+                .map(this::buildWorkoutSummary)
+                .toList();
+
+        CoachRecommendationRequest request = new CoachRecommendationRequest(
+                workoutSummaries,
+                userGoals,
+                fitnessLevel);
+
+        return getRecommendation(request);
     }
 
     public CoachRecommendationResponse getRecommendation(CoachRecommendationRequest request) {
@@ -51,6 +90,53 @@ public class AICoachService {
                     "Failed to reach AI coach service",
                     e);
         }
+    }
+
+    private CoachRecommendationRequest.WorkoutSummary buildWorkoutSummary(Workout workout) {
+        List<Set> sets = setRepository.findByWorkoutId(workout.getId());
+        Map<Long, Exercise> exerciseMap = exerciseRepository.findAllById(
+                sets.stream().map(Set::getExerciseId).distinct().toList()).stream()
+                .collect(Collectors.toMap(Exercise::getId, exercise -> exercise, (first, second) -> first));
+
+        Map<Long, List<Set>> setsByExercise = sets.stream()
+                .collect(Collectors.groupingBy(Set::getExerciseId));
+
+        List<CoachRecommendationRequest.WorkoutSummary.ExerciseSummary> exerciseSummaries = setsByExercise.entrySet()
+                .stream()
+                .filter(entry -> exerciseMap.containsKey(entry.getKey()))
+                .map(entry -> buildExerciseSummary(exerciseMap.get(entry.getKey()), entry.getValue()))
+                .toList();
+
+        return new CoachRecommendationRequest.WorkoutSummary(
+                workout.getStartTime().format(WORKOUT_DATE_FORMATTER),
+                exerciseSummaries);
+    }
+
+    private CoachRecommendationRequest.WorkoutSummary.ExerciseSummary buildExerciseSummary(
+            Exercise exercise,
+            List<Set> sets) {
+        double avgReps = sets.stream()
+                .mapToInt(set -> set.getReps() != null ? set.getReps() : 0)
+                .average()
+                .orElse(0);
+
+        double avgWeight = sets.stream()
+                .mapToDouble(set -> set.getWeight() != null ? set.getWeight() : 0)
+                .average()
+                .orElse(0);
+
+        double avgRPE = sets.stream()
+                .mapToDouble(set -> set.getRpe() != null ? set.getRpe() : 0)
+                .average()
+                .orElse(0);
+
+        return new CoachRecommendationRequest.WorkoutSummary.ExerciseSummary(
+                exercise.getName(),
+                exercise.getCategory(),
+                sets.size(),
+                avgReps,
+                avgWeight,
+                avgRPE);
     }
 
     private ResponseStatusException mapOpenAIError(HttpClientErrorException e) {
