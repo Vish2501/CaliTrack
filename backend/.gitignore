@@ -41,5 +41,3 @@ logs/
 
 ### Application Properties ###
 application-local.yml
-application-prod.yml
-
