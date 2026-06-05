@@ -2,9 +2,9 @@
 
 Full-stack fitness tracking app with a React Native mobile client and a versioned Spring Boot REST API.
 
-## CV summary (accurate to this repo)
+## Overview
 
-> **CaliTrack** — Full-stack workout tracker: Spring Boot 3 REST API (`/api/v1`, Repository/Service layer, stateless JWT via Supabase, normalised PostgreSQL schema) with React Native/Expo client; OpenAI-powered coaching recommendations (GPT-3.5); JUnit/Mockito unit tests and Testcontainers integration tests; Dockerised backend with Flyway migrations and GitHub Actions CI.
+CaliTrack lets users create exercises, start workouts, log sets, review workout history, view basic training analytics, and request AI coaching recommendations from recent training data. The backend exposes JWT-protected REST endpoints under `/api/v1`, persists workout data in PostgreSQL, and documents the API with Swagger/OpenAPI.
 
 ## Stack
 
@@ -52,7 +52,7 @@ npm install
 npm start
 ```
 
-Point the app at your API (`mobile/src/lib/api.ts` defaults to `http://localhost:8080`).
+Point the app at your API (`mobile/src/lib/api.ts` currently defaults to the deployed Render API URL).
 
 ## Run with Docker
 
