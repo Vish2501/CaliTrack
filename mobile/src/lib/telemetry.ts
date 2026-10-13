@@ -2,7 +2,8 @@ export type ProductEventName =
   | "workout_started"
   | "workout_completed"
   | "set_logged"
-  | "exercise_created";
+  | "exercise_created"
+  | "exercise_deleted";
 
 type ApiTimingPoint = {
   durationMs: number;
@@ -16,6 +17,7 @@ const productEventCounts: Record<ProductEventName, number> = {
   workout_completed: 0,
   set_logged: 0,
   exercise_created: 0,
+  exercise_deleted: 0,
 };
 
 const apiTimings: Record<string, ApiTimingPoint[]> = {};

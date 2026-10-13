@@ -2,6 +2,7 @@ package com.calitrack.service;
 
 import com.calitrack.entity.Exercise;
 import com.calitrack.repository.ExerciseRepository;
+import com.calitrack.repository.SetRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,6 +22,9 @@ class ExerciseServiceTest {
     @Mock
     private ExerciseRepository exerciseRepository;
 
+    @Mock
+    private SetRepository setRepository;
+
     @InjectMocks
     private ExerciseService exerciseService;
 
@@ -34,6 +38,7 @@ class ExerciseServiceTest {
 
         exerciseService.deleteExercise(1L, "user-1");
 
+        verify(setRepository).deleteByExerciseId(1L);
         verify(exerciseRepository).deleteById(1L);
     }
 

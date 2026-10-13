@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { getWorkoutDetails } from "../lib/api";
@@ -194,6 +205,24 @@ export default function WorkoutDetailScreen({
     );
   };
 
+  const removeLocalSet = (exerciseId: string, setIndex: number) => {
+    updateEntries(
+      displayedEntries
+        .map((entry) =>
+          String(entry.id) === String(exerciseId)
+            ? { ...entry, sets: entry.sets.filter((_, i) => i !== setIndex) }
+            : entry,
+        )
+        .filter((entry) => entry.sets.length > 0),
+    );
+  };
+
+  const removeExercise = (exerciseId: string) => {
+    updateEntries(
+      displayedEntries.filter((e) => String(e.id) !== String(exerciseId)),
+    );
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-[#124559] p-5">
       <View className="flex-row items-center gap-3 mb-4">
@@ -262,9 +291,20 @@ export default function WorkoutDetailScreen({
               key={String(exercise.id)}
               className="bg-[#01161e] rounded-xl p-4"
             >
-              <Text className="text-base font-bold text-[#eff6e0]">
-                {exercise.name}
-              </Text>
+              <View className="flex-row items-center justify-between mb-1">
+                <Text className="text-base font-bold text-[#eff6e0]">
+                  {exercise.name}
+                </Text>
+                {!isReadOnly && (
+                  <Pressable
+                    onPress={() => removeExercise(exercise.id)}
+                    accessibilityLabel={`Remove ${exercise.name}`}
+                    className="p-1"
+                  >
+                    <Ionicons name="close-circle" size={20} color="#aec3b0" />
+                  </Pressable>
+                )}
+              </View>
               <Text className="text-xs text-[#aec3b0] mb-3">
                 {exercise.category}
               </Text>
@@ -298,16 +338,25 @@ export default function WorkoutDetailScreen({
                     className="flex-1 bg-[#124559] text-[#eff6e0] px-3 py-2 rounded-lg"
                   />
                   {!isReadOnly && (
-                    <Pressable
-                      className={`px-3 py-2 rounded-lg ${set.completed ? "bg-[#eff6e0]" : "bg-[#598392]"}`}
-                      onPress={() => toggleSetCompleted(exercise.id, index)}
-                    >
-                      <Ionicons
-                        name="checkmark"
-                        size={16}
-                        color={set.completed ? "#01161e" : "#eff6e0"}
-                      />
-                    </Pressable>
+                    <>
+                      <Pressable
+                        className={`px-3 py-2 rounded-lg ${set.completed ? "bg-[#eff6e0]" : "bg-[#598392]"}`}
+                        onPress={() => toggleSetCompleted(exercise.id, index)}
+                      >
+                        <Ionicons
+                          name="checkmark"
+                          size={16}
+                          color={set.completed ? "#01161e" : "#eff6e0"}
+                        />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => removeLocalSet(exercise.id, index)}
+                        accessibilityLabel="Remove set"
+                        className="px-1 py-2"
+                      >
+                        <Ionicons name="close" size={16} color="#aec3b0" />
+                      </Pressable>
+                    </>
                   )}
                 </View>
               ))}

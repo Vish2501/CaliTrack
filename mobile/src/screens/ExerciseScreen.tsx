@@ -9,8 +9,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   createExercise,
+  deleteExercise,
   ensureUserExercises,
   ExerciseResponse,
 } from "../lib/api";
@@ -50,6 +52,32 @@ export default function ExercisesScreen() {
       };
     }, []),
   );
+
+  const handleDelete = (item: ExerciseResponse) => {
+    Alert.alert(
+      "Delete Exercise",
+      `Remove "${item.name}" from your library?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteExercise(item.id);
+              setExercises((prev) => prev.filter((e) => e.id !== item.id));
+              trackProductEvent("exercise_deleted");
+            } catch (err) {
+              Alert.alert(
+                "Delete failed",
+                err instanceof Error ? err.message : "Could not delete exercise",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -151,6 +179,13 @@ export default function ExercisesScreen() {
                     {item.category ?? "Uncategorized"}
                   </Text>
                 </View>
+                <Pressable
+                  onPress={() => handleDelete(item)}
+                  accessibilityLabel={`Delete ${item.name}`}
+                  className="p-1"
+                >
+                  <Ionicons name="trash-outline" size={18} color="#598392" />
+                </Pressable>
               </View>
             </View>
           )}
