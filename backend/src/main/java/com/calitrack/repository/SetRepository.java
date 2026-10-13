@@ -18,6 +18,7 @@ public interface SetRepository extends JpaRepository<Set, Long> {
 
   List<Set> findByWorkoutId(Long workoutId);
 Optional<Set> findByIdAndWorkoutId(Long id, Long workoutId);
+  void deleteByExerciseId(Long exerciseId);
   @Query(value = """
           SELECT s.exercise_id AS exerciseId,
              e.name AS exerciseName,
@@ -46,6 +47,8 @@ Optional<Set> findByIdAndWorkoutId(Long id, Long workoutId);
             AND s.weight IS NOT NULL
           GROUP BY s.exercise_id, e.name
       """, nativeQuery = true)
+
+
   List<HeaviestPrView> findHeaviestPrs(@Param("userId") String userId);
 
   @Query(value = """

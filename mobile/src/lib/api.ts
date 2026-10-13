@@ -292,6 +292,21 @@ export async function deleteExercise(exerciseId: number) {
   }
 }
 
+export async function deleteSet(workoutId: number, setId: number) {
+  const res = await fetchWithTiming(
+    "delete_set",
+    `${API_V1}/workouts/${workoutId}/sets/${setId}`,
+    {
+      method: "DELETE",
+      headers: await authHeaders(),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+}
+
 export async function ensureUserExercises() {
   const existingExercises = await getExercises();
   const existingNames = new Set(
