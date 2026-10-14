@@ -1,7 +1,6 @@
 package com.calitrack.controller;
 
 import com.calitrack.dto.CoachProfileResponse;
-import com.calitrack.dto.CoachRecommendationRequest;
 import com.calitrack.dto.CoachRecommendationResponse;
 import com.calitrack.dto.LatestCoachRecommendationResponse;
 import com.calitrack.dto.UpdateCoachProfileRequest;
@@ -37,21 +36,6 @@ public class AICoachController {
         this.coachRecommendationService = coachRecommendationService;
         this.coachProfileService = coachProfileService;
         this.currentUserService = currentUserService;
-    }
-
-    /**
-     * Get AI-powered coaching recommendations based on recent workout history
-     * 
-     * @param request The recommendation request with workout history and user goals
-     * @param jwt     The authenticated user's JWT token
-     * @return AI-generated coaching recommendation
-     */
-    @PostMapping("/recommend")
-    public ResponseEntity<CoachRecommendationResponse> getRecommendation(
-            @Valid @RequestBody CoachRecommendationRequest request,
-            @AuthenticationPrincipal Jwt jwt) {
-        CoachRecommendationResponse recommendation = aiCoachService.getRecommendation(request);
-        return ResponseEntity.ok(recommendation);
     }
 
     /**

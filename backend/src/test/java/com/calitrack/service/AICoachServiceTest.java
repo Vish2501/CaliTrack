@@ -1,6 +1,5 @@
 package com.calitrack.service;
 
-import com.calitrack.dto.CoachRecommendationRequest;
 import com.calitrack.dto.CoachRecommendationResponse;
 import com.calitrack.entity.Exercise;
 import com.calitrack.entity.Set;
@@ -58,13 +57,13 @@ class AICoachServiceTest {
     void getRecommendationThrowsWhenApiKeyMissing() {
         when(coachModelClient.isConfigured()).thenReturn(false);
 
-        CoachRecommendationRequest request = new CoachRecommendationRequest(
+        CoachPromptInput input = new CoachPromptInput(
             List.of(),
             "strength",
             "intermediate"
         );
 
-        assertThatThrownBy(() -> aiCoachService.getRecommendation(request))
+        assertThatThrownBy(() -> aiCoachService.getRecommendation(input))
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("missing GEMINI_API_KEY");
     }
@@ -79,7 +78,7 @@ class AICoachServiceTest {
             """);
 
         CoachRecommendationResponse response = aiCoachService.getRecommendation(
-            new CoachRecommendationRequest(List.of(), "strength", "intermediate")
+            new CoachPromptInput(List.of(), "strength", "intermediate")
         );
 
         assertThat(response.recommendation()).contains("pulling volume");
@@ -152,7 +151,7 @@ class AICoachServiceTest {
             """);
 
         CoachRecommendationResponse response = aiCoachService.getRecommendation(
-            new CoachRecommendationRequest(List.of(), "strength", "intermediate")
+            new CoachPromptInput(List.of(), "strength", "intermediate")
         );
 
         assertThat(response.recommendation()).isEqualTo("Add a set of dips.");
@@ -167,7 +166,7 @@ class AICoachServiceTest {
             "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\"}}"));
 
         assertThatThrownBy(() -> aiCoachService.getRecommendation(
-                new CoachRecommendationRequest(List.of(), "strength", "intermediate")))
+                new CoachPromptInput(List.of(), "strength", "intermediate")))
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("503")
             .hasMessageContaining("rate limit or daily quota");
@@ -180,7 +179,7 @@ class AICoachServiceTest {
             "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\"}}"));
 
         assertThatThrownBy(() -> aiCoachService.getRecommendation(
-                new CoachRecommendationRequest(List.of(), "strength", "intermediate")))
+                new CoachPromptInput(List.of(), "strength", "intermediate")))
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("503")
             .hasMessageContaining("invalid Gemini API key");
