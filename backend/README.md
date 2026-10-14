@@ -39,13 +39,20 @@ Migrations: `src/main/resources/db/migration/`
 |--------|------|--------|
 | POST | `/workouts` | 201 |
 | GET | `/workouts`, `/workouts/{id}` | 200 |
-| PATCH | `/workouts/{id}/finish` | 200 |
+| PATCH | `/workouts/{id}` (notes), `/workouts/{id}/finish` | 200 |
+| GET/POST | `/workouts/{id}/sets` | 200 / 201 |
+| PATCH/DELETE | `/workouts/{id}/sets/{setId}` | 200 / 204 |
 | GET/POST | `/exercises` | 200 / 201 |
 | DELETE | `/exercises/{id}` | 204 |
-| POST | `/workouts/{id}/sets` | 201 |
+| GET | `/analytics/weekly-volume`, `/analytics/workout-frequency` | 200 |
+| GET | `/analytics/prs/heaviest`, `/analytics/prs/best-set-volume` | 200 |
 | GET | `/coach/recommend` | 200 |
 | GET | `/coach/recommendations/latest` | 200 |
 | GET/PUT | `/coach/profile` | 200 |
+
+Errors use one body shape (`timestamp`, `status`, `error`, `message`, `path`). Client mistakes are
+4xx: unknown path 404, unsupported method 405, malformed JSON or a non-numeric ID 400. Only
+unexpected failures are 500 and logged as errors.
 
 Public: `GET /health`
 

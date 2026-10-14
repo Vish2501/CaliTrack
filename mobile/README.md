@@ -15,6 +15,8 @@ Current implemented flow:
 - Browse completed workout history and open workout details
 - Manage personal exercise library (add + view)
 - View profile insights (weekly workout frequency for the last 4 weeks)
+- AI coach (from Profile): set your goal and fitness level, see the recommendation generated after
+  your latest workout, or ask for one on demand
 - Log out from Profile
 
 Tab order in app:
@@ -39,13 +41,14 @@ Tab order in app:
 - Frontend: Expo React Native app (this repository)
 - Auth: Supabase session-based authentication
 - API: Mobile app calls a backend API (`src/lib/api.ts`)
-- Backend base URL default: `http://localhost:8080`
+- Backend base URL: the deployed API by default; set `EXPO_PUBLIC_API_URL` to use another
 
 Primary API areas used:
 
 - `workouts` (start, list, details, finish, set logging)
 - `exercises` (list/create, plus initial seed behavior)
 - `analytics/workout-frequency` (profile insights)
+- `coach` (latest recommendation, on-demand recommendation, coach profile)
 
 ## Local Setup
 
@@ -54,7 +57,7 @@ Primary API areas used:
 - Node.js 20+
 - npm
 - Expo (via `npx expo`)
-- iOS Simulator / Android Emulator / Expo Go
+- Expo Go on a phone (it must match the project's SDK, 57), or an iOS Simulator / Android Emulator
 - Backend API running locally
 
 ### Install
@@ -81,13 +84,14 @@ npx tsc --noEmit
 
 ### API Base URL
 
-Configured in [`src/lib/api.ts`](src/lib/api.ts):
+Configured in [`src/lib/api.ts`](src/lib/api.ts). It defaults to the deployed API; to use a local
+backend, set `EXPO_PUBLIC_API_URL` when starting Expo:
 
-```ts
-const BASE_URL = "http://localhost:8080";
+```bash
+EXPO_PUBLIC_API_URL=http://<your-LAN-IP>:8080 npx expo start
 ```
 
-For physical devices, use your machine LAN IP instead of `localhost`.
+On a physical phone, use your machine's LAN IP rather than `localhost`.
 
 ### Supabase
 
@@ -108,15 +112,13 @@ src/
 
 ## Roadmap
 
-- Template CRUD and better template editing UX
+- Previous set values while logging (last time's weight and reps as suggestions, like Strong/Hevy)
+- Saved routines to replace the placeholder templates on the Workouts tab
+- Rest timer after completing a set, and a summary when a workout finishes
 - Persistent workout drafts across app restarts
-- Richer profile insights (volume, streaks, PR trends)
-- AI coach flow (chat + suggested workouts/templates) via backend integration
 - Test coverage for core data flows
 
 ## Screenshots
-
-Add your screenshots to `assets/screenshots/` using the filenames below.
 
 ### Login
 ![Login screen](assets/screenshots/login.png)
