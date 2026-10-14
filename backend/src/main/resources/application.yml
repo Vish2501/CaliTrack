@@ -26,6 +26,15 @@ spring:
         # Fail within 5s instead of the default 60s when the broker is unreachable, since
         # sending happens on the request thread after the workout is saved.
         max.block.ms: 5000
+    consumer:
+      auto-offset-reset: earliest
+      # Wraps the JSON deserializer so a malformed message becomes an error the handler can send
+      # to the DLT, instead of failing every poll on the same offset forever.
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.calitrack.event.WorkoutLoggedEvent
+        spring.json.use.type.headers: false
 
   jpa:
     hibernate:
@@ -61,3 +70,6 @@ calitrack:
     # Generate coach recommendations from WorkoutLogged events on Kafka.
     # Off unless a broker is running (docker-compose starts one for the docker profile).
     async-enabled: ${COACH_ASYNC_ENABLED:false}
+    retry:
+      initial-interval-ms: 1000
+      max-retries: 3
