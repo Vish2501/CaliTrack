@@ -15,6 +15,9 @@ spring:
   flyway:
     enabled: false
 
+  kafka:
+    bootstrap-servers: localhost:9092
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -43,3 +46,9 @@ supabase:
 # Secrets: set OPENAI_API_KEY in your environment or backend/.env
 openai:
   api-key: ${OPENAI_API_KEY:}
+
+calitrack:
+  coach:
+    # Generate coach recommendations from WorkoutLogged events on Kafka.
+    # Off unless a broker is running (docker-compose starts one for the docker profile).
+    async-enabled: ${COACH_ASYNC_ENABLED:false}

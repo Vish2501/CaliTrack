@@ -68,6 +68,7 @@ docker compose up --build
 
 - API: `http://localhost:8080`
 - Postgres: `localhost:5432` (user/password/db: `calitrack`)
+- Kafka: `localhost:9092` (single-node KRaft; the backend creates its topics on startup)
 
 ## Tests
 
@@ -85,6 +86,7 @@ Integration tests need Docker running (Testcontainers). Unit tests run without D
 | `OPENAI_API_KEY` | AI coach (env or `backend/.env`) |
 | Supabase JWT settings | `backend/src/main/resources/application.yml` |
 | Database | Local Postgres or Docker Compose |
+| `COACH_ASYNC_ENABLED` | Kafka-backed AI coach; on in Docker Compose, off by default elsewhere |
 
 ## API versioning
 
