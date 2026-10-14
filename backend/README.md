@@ -22,7 +22,9 @@ src/main/java/com/calitrack/
 
 ## Database
 
-Normalised tables: `workouts`, `exercises`, `sets` (3NF-style separation).
+Normalised tables: `workouts`, `exercises`, `sets` (3NF-style separation), plus
+`coach_recommendations` (one per workout, enforced by a unique constraint) and
+`coach_profiles` (goals and fitness level per user) for the async AI coach.
 
 | Profile | Schema management |
 |---------|-------------------|
@@ -65,7 +67,9 @@ From repo root:
 docker compose up --build
 ```
 
-Uses profile `docker` (Flyway + Postgres container).
+Uses profile `docker` (Flyway + Postgres and Kafka containers). With
+`calitrack.coach.async-enabled` on, the backend creates the `workout-logged` and
+`workout-logged.DLT` topics at startup.
 
 ## Tests
 
@@ -74,7 +78,9 @@ mvn test
 ```
 
 - **Unit tests**: Mockito (`*ServiceTest`, `GlobalExceptionHandlerTest`)
-- **Integration tests**: `@SpringBootTest` + Testcontainers PostgreSQL (requires Docker)
+- **Integration tests**: `@SpringBootTest` + Testcontainers PostgreSQL and Kafka (requires Docker).
+  `SchemaMigrationIntegrationTest` runs the Flyway migrations with `ddl-auto: validate`, so an
+  entity that drifts from the migrations fails the build.
 
 ## CI
 
