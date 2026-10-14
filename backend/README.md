@@ -51,6 +51,9 @@ Public: `GET /health`
 
 - `GET /api/v1/coach/recommend` — analyses recent workouts via **OpenAI GPT-3.5**
 - Set `OPENAI_API_KEY` in environment or `backend/.env`
+- With `calitrack.coach.async-enabled` on, finishing a workout publishes a `WorkoutLogged` event
+  to the `workout-logged` topic: JSON, keyed by user ID, sent only after the transaction commits.
+  If Kafka is unreachable the request still succeeds and the failure is logged.
 
 ## Run locally
 

@@ -17,6 +17,15 @@ spring:
 
   kafka:
     bootstrap-servers: localhost:9092
+    producer:
+      acks: all
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        # Plain JSON with no Java class name header, so consumers don't depend on our classes.
+        spring.json.add.type.headers: false
+        # Fail within 5s instead of the default 60s when the broker is unreachable, since
+        # sending happens on the request thread after the workout is saved.
+        max.block.ms: 5000
 
   jpa:
     hibernate:
