@@ -3,20 +3,21 @@ package com.calitrack.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Stand-in for Gemini when calitrack.coach.fake-model is true, so the coach can be demoed locally
- * without an API key or quota. Replies in the same format the real prompt asks for, built from the
- * most recent exercise in the prompt, after a short delay so the app's "generating" state shows.
+ * Stand-in for Gemini so the coach can be demoed without an API key or quota. Selected by
+ * CoachModelSelection: calitrack.coach.fake-model "true", or "auto" with no Gemini key. Replies in the
+ * same format the real prompt asks for, built from the most recent exercise in the prompt, after a
+ * short delay so the app's "generating" state shows.
  * Every reply is labelled as a demo so it can't be mistaken for real model output.
  */
 @Component
-@ConditionalOnProperty(name = "calitrack.coach.fake-model", havingValue = "true")
+@Conditional(CoachModelSelection.FakeModel.class)
 public class FakeCoachModelClient implements CoachModelClient {
 
     private static final Logger log = LoggerFactory.getLogger(FakeCoachModelClient.class);

@@ -58,7 +58,7 @@ Point the app at your API (`mobile/src/lib/api.ts` currently defaults to the dep
 
 ## Run with Docker
 
-Requires Docker Desktop. The AI coach uses demo replies by default (see below), so no key is needed:
+Requires Docker Desktop. The AI coach uses Gemini if `GEMINI_API_KEY` is set in your shell, and demo replies otherwise (see below):
 
 ```bash
 docker compose up --build
@@ -67,10 +67,11 @@ docker compose up --build
 - API: `http://localhost:8080`
 - Postgres: `localhost:5432` (user/password/db: `calitrack`)
 - Kafka: `localhost:9092` (single-node KRaft; the backend creates its topics on startup)
+- Jaeger (traces): `http://localhost:16686`, service `calitrack-backend`
 
-## Demo the AI coach locally (no API key needed)
+## Demo the AI coach locally (API key optional)
 
-Docker Compose runs the coach with a fake model by default: replies are canned, labelled
+Without `GEMINI_API_KEY` set, Docker Compose runs the coach with a demo model: replies are canned, labelled
 `[Demo reply, no AI call]`, and arrive after ~3s so the app's "generating" state is visible.
 Everything else is real: the API, Kafka, the consumer and Postgres.
 
@@ -93,8 +94,11 @@ cd mobile
 EXPO_PUBLIC_API_URL=http://localhost:8080 npx expo start --ios
 ```
 
-Finish a workout, open the Coach tab, and the recommendation appears after a few seconds.
-To use real Gemini instead: `COACH_FAKE_MODEL=false GEMINI_API_KEY=... docker compose up -d`.
+Finish a workout, open the Coach tab, and the recommendation appears after a few seconds. Then open
+Jaeger at http://localhost:16686: the `PATCH /api/v1/workouts/{workoutId}/finish` trace shows the
+request, the Kafka send, and the consumer that generated the recommendation, all under one trace ID.
+With `GEMINI_API_KEY` set, the same commands use real Gemini replies. To force demo replies anyway
+(for a live demo that can't hit Gemini's rate limits): `COACH_FAKE_MODEL=true docker compose up -d`.
 
 ## Tests
 

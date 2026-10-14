@@ -42,6 +42,12 @@ services:
       timeout: 10s
       retries: 10
 
+  jaeger:
+    image: jaegertracing/jaeger:2.20.0
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4318:4318"   # OTLP over HTTP, where the backend sends spans
+
   backend:
     build:
       context: ./backend
@@ -55,13 +61,17 @@ services:
       SPRING_DATASOURCE_PASSWORD: calitrack
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      # Demo replies instead of Gemini; set COACH_FAKE_MODEL=false to use your GEMINI_API_KEY.
-      COACH_FAKE_MODEL: ${COACH_FAKE_MODEL:-true}
+      # auto: real Gemini replies when GEMINI_API_KEY is set, demo replies when it isn't.
+      COACH_FAKE_MODEL: ${COACH_FAKE_MODEL:-auto}
+      # Send traces to Jaeger: http://localhost:16686
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       db:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      jaeger:
+        condition: service_started
 
 volumes:
   pgdata:
