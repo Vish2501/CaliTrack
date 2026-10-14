@@ -1,7 +1,7 @@
 package com.calitrack.service;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,7 +17,7 @@ import java.util.Map;
  * failure; callers decide how to map or retry them.
  */
 @Component
-@ConditionalOnProperty(name = "calitrack.coach.fake-model", havingValue = "false", matchIfMissing = true)
+@Conditional(CoachModelSelection.GeminiModel.class)
 public class GeminiChatClient implements CoachModelClient {
 
     private static final String SYSTEM_PROMPT =

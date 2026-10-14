@@ -65,6 +65,18 @@ Public: `GET /health`
 - Failures are retried 3 times with exponential backoff (1s, 2s, 4s), then sent to
   `workout-logged.DLT`. A missing or invalid Gemini key, Gemini's free-tier rate limit or daily quota, and malformed messages go straight to the DLT.
 
+## Tracing
+
+Micrometer Tracing with the OpenTelemetry bridge. Every log line carries `[traceId-spanId]`, and
+Spring Kafka observation puts the trace context in the record headers, so the `coach-recommender`
+consumer continues the trace started by the finish-workout request.
+
+- Spans are exported over OTLP only when `management.otlp.tracing.endpoint` is set. Docker Compose
+  points it at Jaeger (UI on http://localhost:16686); elsewhere only the log correlation applies.
+- `/health` and Spring Security's filter-chain spans are not traced, to keep Jaeger readable.
+- `KafkaTracingIntegrationTest` checks that the HTTP request, the Kafka send and the consumer share
+  one trace ID.
+
 ## Run locally
 
 ```bash

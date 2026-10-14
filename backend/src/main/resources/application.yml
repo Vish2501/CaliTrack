@@ -26,6 +26,12 @@ spring:
         # Fail within 5s instead of the default 60s when the broker is unreachable, since
         # sending happens on the request thread after the workout is saved.
         max.block.ms: 5000
+    # Carry the trace context in Kafka headers, so the consumer continues the trace that the
+    # finish-workout request started.
+    template:
+      observation-enabled: true
+    listener:
+      observation-enabled: true
     consumer:
       auto-offset-reset: earliest
       # Wraps the JSON deserializer so a malformed message becomes an error the handler can send
@@ -46,6 +52,14 @@ spring:
 
 server:
   port: ${PORT:8080}
+
+management:
+  tracing:
+    sampling:
+      # Trace every request; traffic is tiny. Lower this if that ever changes.
+      probability: 1.0
+  # Spans are exported only when management.otlp.tracing.endpoint is set; Docker Compose sets it
+  # to Jaeger. Without it, trace and span IDs still appear in every log line.
 
 logging:
   level:
@@ -76,6 +90,7 @@ calitrack:
     retry:
       initial-interval-ms: 1000
       max-retries: 3
-    # Canned demo replies instead of Gemini (FakeCoachModelClient). On by default in Docker Compose.
+    # Canned demo replies instead of Gemini (FakeCoachModelClient): true, false, or auto (demo replies
+    # only when GEMINI_API_KEY is unset). Docker Compose uses auto; elsewhere it defaults to false.
     fake-model: ${COACH_FAKE_MODEL:false}
     fake-model-delay-ms: 3000
