@@ -12,7 +12,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.nio.charset.StandardCharsets;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -61,11 +66,11 @@ class AICoachServiceTest {
 
         assertThatThrownBy(() -> aiCoachService.getRecommendation(request))
             .isInstanceOf(ResponseStatusException.class)
-            .hasMessageContaining("missing OPENAI_API_KEY");
+            .hasMessageContaining("missing GEMINI_API_KEY");
     }
 
     @Test
-    void getRecommendationParsesOpenAiResponse() {
+    void getRecommendationParsesModelReply() {
         when(coachModelClient.isConfigured()).thenReturn(true);
         when(coachModelClient.complete(anyString())).thenReturn("""
             RECOMMENDATION: Add more pulling volume this week.
@@ -135,5 +140,54 @@ class AICoachServiceTest {
         assertThat(response.recommendation()).contains("pulling work");
         assertThat(response.focusArea()).isEqualTo("Back");
         assertThat(response.suggestedNextExercise()).isEqualTo("Pull-Up");
+    }
+
+    @Test
+    void getRecommendationToleratesMarkdownBoldLabels() {
+        when(coachModelClient.isConfigured()).thenReturn(true);
+        when(coachModelClient.complete(anyString())).thenReturn("""
+            **RECOMMENDATION:** Add a set of dips.
+            **FOCUS_AREA:** Triceps
+            **NEXT_EXERCISE:** Dip
+            """);
+
+        CoachRecommendationResponse response = aiCoachService.getRecommendation(
+            new CoachRecommendationRequest(List.of(), "strength", "intermediate")
+        );
+
+        assertThat(response.recommendation()).isEqualTo("Add a set of dips.");
+        assertThat(response.focusArea()).isEqualTo("Triceps");
+        assertThat(response.suggestedNextExercise()).isEqualTo("Dip");
+    }
+
+    @Test
+    void geminiRateLimitIsReportedAsServiceUnavailable() {
+        when(coachModelClient.isConfigured()).thenReturn(true);
+        when(coachModelClient.complete(anyString())).thenThrow(geminiError(HttpStatus.TOO_MANY_REQUESTS,
+            "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\"}}"));
+
+        assertThatThrownBy(() -> aiCoachService.getRecommendation(
+                new CoachRecommendationRequest(List.of(), "strength", "intermediate")))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("503")
+            .hasMessageContaining("rate limit or daily quota");
+    }
+
+    @Test
+    void invalidGeminiKeyIsReportedAsNotConfigured() {
+        when(coachModelClient.isConfigured()).thenReturn(true);
+        when(coachModelClient.complete(anyString())).thenThrow(geminiError(HttpStatus.BAD_REQUEST,
+            "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\"}}"));
+
+        assertThatThrownBy(() -> aiCoachService.getRecommendation(
+                new CoachRecommendationRequest(List.of(), "strength", "intermediate")))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("503")
+            .hasMessageContaining("invalid Gemini API key");
+    }
+
+    private static HttpClientErrorException geminiError(HttpStatus status, String body) {
+        return HttpClientErrorException.create(status, status.getReasonPhrase(), HttpHeaders.EMPTY,
+            body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
     }
 }

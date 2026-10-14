@@ -10,7 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Stand-in for OpenAI when calitrack.coach.fake-model is true, so the coach can be demoed locally
+ * Stand-in for Gemini when calitrack.coach.fake-model is true, so the coach can be demoed locally
  * without an API key or quota. Replies in the same format the real prompt asks for, built from the
  * most recent exercise in the prompt, after a short delay so the app's "generating" state shows.
  * Every reply is labelled as a demo so it can't be mistaken for real model output.
@@ -29,7 +29,7 @@ public class FakeCoachModelClient implements CoachModelClient {
 
     public FakeCoachModelClient(@Value("${calitrack.coach.fake-model-delay-ms}") long delayMs) {
         this.delayMs = delayMs;
-        log.warn("AI coach is using the fake model: replies are canned demo text, not OpenAI");
+        log.warn("AI coach is using the fake model: replies are canned demo text, not Gemini");
     }
 
     @Override
@@ -54,7 +54,7 @@ public class FakeCoachModelClient implements CoachModelClient {
         Matcher goalsLine = GOALS_LINE.matcher(prompt);
         String goals = goalsLine.find() ? goalsLine.group(1).trim() : "general fitness";
 
-        return "RECOMMENDATION: [Demo reply, no OpenAI call] For your " + goals + " goal, add one more set of "
+        return "RECOMMENDATION: [Demo reply, no AI call] For your " + goals + " goal, add one more set of "
             + name + " next session and keep the effort around RPE 8.\n"
             + "FOCUS_AREA: " + area + "\n"
             + "NEXT_EXERCISE: " + name;

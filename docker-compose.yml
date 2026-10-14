@@ -53,9 +53,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/calitrack
       SPRING_DATASOURCE_USERNAME: calitrack
       SPRING_DATASOURCE_PASSWORD: calitrack
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-      # Demo replies instead of OpenAI; set COACH_FAKE_MODEL=false to use your OPENAI_API_KEY.
+      # Demo replies instead of Gemini; set COACH_FAKE_MODEL=false to use your GEMINI_API_KEY.
       COACH_FAKE_MODEL: ${COACH_FAKE_MODEL:-true}
     depends_on:
       db:

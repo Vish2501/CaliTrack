@@ -14,7 +14,7 @@ CaliTrack lets users create exercises, start workouts, log sets, review workout 
 - Spring Boot 3, Java 17, Spring Data JPA, Spring Security
 - PostgreSQL, Flyway
 - Supabase Auth (JWT)
-- OpenAI API (AI coach)
+- Google Gemini API, free tier (AI coach)
 
 ## Project structure
 
@@ -30,7 +30,7 @@ CaliTrack/
 
 - Versioned REST API under `/api/v1`
 - JWT-protected workouts, exercises, sets, analytics
-- OpenAI coaching recommendations from recent workout history
+- AI coaching recommendations (Gemini) from recent workout history
 - HTTP semantics: 201 Created, 204 No Content, consistent error responses
 - Unit + integration tests (Testcontainers / PostgreSQL)
 
@@ -40,7 +40,7 @@ CaliTrack/
 
 ```bash
 cd backend
-cp .env.example .env   # add OPENAI_API_KEY for AI coach
+cp .env.example .env   # add GEMINI_API_KEY for AI coach
 mvn spring-boot:run
 ```
 
@@ -58,10 +58,9 @@ Point the app at your API (`mobile/src/lib/api.ts` currently defaults to the dep
 
 ## Run with Docker
 
-Requires Docker Desktop and `OPENAI_API_KEY` in your shell (optional, for AI coach):
+Requires Docker Desktop. The AI coach uses demo replies by default (see below), so no key is needed:
 
 ```bash
-export OPENAI_API_KEY=sk-...   # optional
 docker compose up --build
 ```
 
@@ -69,10 +68,10 @@ docker compose up --build
 - Postgres: `localhost:5432` (user/password/db: `calitrack`)
 - Kafka: `localhost:9092` (single-node KRaft; the backend creates its topics on startup)
 
-## Demo the AI coach locally (no OpenAI needed)
+## Demo the AI coach locally (no API key needed)
 
 Docker Compose runs the coach with a fake model by default: replies are canned, labelled
-`[Demo reply, no OpenAI call]`, and arrive after ~3s so the app's "generating" state is visible.
+`[Demo reply, no AI call]`, and arrive after ~3s so the app's "generating" state is visible.
 Everything else is real: the API, Kafka, the consumer and Postgres.
 
 ```bash
@@ -95,7 +94,7 @@ EXPO_PUBLIC_API_URL=http://localhost:8080 npx expo start --ios
 ```
 
 Finish a workout, open the Coach tab, and the recommendation appears after a few seconds.
-To use real OpenAI instead: `COACH_FAKE_MODEL=false OPENAI_API_KEY=sk-... docker compose up -d`.
+To use real Gemini instead: `COACH_FAKE_MODEL=false GEMINI_API_KEY=... docker compose up -d`.
 
 ## Tests
 
@@ -110,7 +109,8 @@ Integration tests need Docker running (Testcontainers). Unit tests run without D
 
 | Variable | Purpose |
 |----------|---------|
-| `OPENAI_API_KEY` | AI coach (env or `backend/.env`) |
+| `GEMINI_API_KEY` | AI coach; free key from [Google AI Studio](https://aistudio.google.com/apikey) (env or `backend/.env`) |
+| `GEMINI_MODEL` | Optional; defaults to `gemini-3.5-flash-lite` |
 | Supabase JWT settings | `backend/src/main/resources/application.yml` |
 | Database | Local Postgres or Docker Compose |
 | `COACH_ASYNC_ENABLED` | Kafka-backed AI coach; on in Docker Compose, off by default elsewhere |

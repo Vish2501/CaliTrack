@@ -1,6 +1,6 @@
 package com.calitrack.service;
 
-/** The language model behind the AI coach: OpenAI, or a canned stand-in for local demos. */
+/** The language model behind the AI coach: Gemini, or a canned stand-in for local demos. */
 public interface CoachModelClient {
 
     boolean isConfigured();

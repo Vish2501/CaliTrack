@@ -20,7 +20,7 @@ public abstract class AbstractKafkaIntegrationTest extends AbstractIntegrationTe
         registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
     }
 
-    // The consumer runs in every Kafka test context; never let it call the real OpenAI API.
+    // The consumer runs in every Kafka test context; never let it call the real Gemini API.
     @MockBean
     protected CoachModelClient coachModelClient;
 }

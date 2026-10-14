@@ -28,12 +28,12 @@ class FakeCoachModelIntegrationTest extends AbstractIntegrationTest {
     private CoachModelClient coachModelClient;
 
     @Test
-    void fakeModelReplacesOpenAIAndServesTheCoachEndpoint() throws Exception {
+    void fakeModelReplacesGeminiAndServesTheCoachEndpoint() throws Exception {
         assertThat(coachModelClient).isInstanceOf(FakeCoachModelClient.class);
 
         mockMvc.perform(get("/api/v1/coach/recommend").with(jwt().jwt(j -> j.subject(TEST_USER))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.recommendation").value(startsWith("[Demo reply, no OpenAI call]")))
+            .andExpect(jsonPath("$.recommendation").value(startsWith("[Demo reply, no AI call]")))
             .andExpect(jsonPath("$.suggestedNextExercise").value("Push-Up"));
     }
 }
