@@ -84,7 +84,9 @@ mvn test
 
 ## CI
 
-GitHub Actions: `.github/workflows/backend-ci.yml` runs `mvn test` on push/PR.
+GitHub Actions: `.github/workflows/ci.yml` runs `mvn test` and a Docker image build when
+`backend/` changes, and the mobile typecheck when `mobile/` changes. A final `ci-passed` job
+is the single required check for `main`; skipped jobs count as passed, failed ones fail it.
 
 ## Config files
 

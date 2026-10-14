@@ -1,7 +1,6 @@
 # CaliTrack
 
-[![Backend CI](https://github.com/Vish2501/CaliTrack/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/Vish2501/CaliTrack/actions/workflows/backend-ci.yml)
-[![Mobile CI](https://github.com/Vish2501/CaliTrack/actions/workflows/mobile-ci.yml/badge.svg)](https://github.com/Vish2501/CaliTrack/actions/workflows/mobile-ci.yml)
+[![CI](https://github.com/Vish2501/CaliTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Vish2501/CaliTrack/actions/workflows/ci.yml)
 
 Full-stack fitness tracking app with a React Native mobile client and a versioned Spring Boot REST API.
 

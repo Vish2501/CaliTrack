@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Works out which parts of the repo changed, so backend and mobile jobs only run when needed.
+  # Path filters at the workflow level would leave required checks pending forever on PRs that
+  # don't touch that path; a job skipped with `if:` reports as passed instead.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - "backend/**"
+              - ".github/workflows/ci.yml"
+            mobile:
+              - "mobile/**"
+              - ".github/workflows/ci.yml"
+
+  test:
+    name: backend tests
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run tests
+        working-directory: backend
+        run: mvn -B test
+
+  docker-build:
+    name: backend docker build
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  typecheck:
+    name: mobile typecheck
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: mobile/.nvmrc
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: mobile
+        run: npm run typecheck
+
+  # The one check branch protection requires. Runs even when jobs above fail or are skipped,
+  # and passes only if none of them failed or were cancelled.
+  ci-passed:
+    name: ci-passed
+    if: always()
+    needs: [changes, test, docker-build, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        run: |
+          echo '${{ toJSON(needs) }}'
+          if ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}; then
+            echo "A required job failed or was cancelled."
+            exit 1
+          fi
