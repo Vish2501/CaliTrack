@@ -64,15 +64,15 @@ public class AICoachService {
         if (!coachModelClient.isConfigured()) {
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "AI coach is not configured (missing OPENAI_API_KEY)");
+                    "AI coach is not configured (missing GEMINI_API_KEY)");
         }
 
         try {
             String prompt = buildPrompt(request);
-            String gptResponse = coachModelClient.complete(prompt);
-            return parseResponse(gptResponse);
+            String modelReply = coachModelClient.complete(prompt);
+            return parseResponse(modelReply);
         } catch (HttpClientErrorException e) {
-            throw mapOpenAIError(e);
+            throw mapModelError(e);
         } catch (RestClientException e) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY,
@@ -128,17 +128,19 @@ public class AICoachService {
                 avgRPE);
     }
 
-    private ResponseStatusException mapOpenAIError(HttpClientErrorException e) {
-        String body = e.getResponseBodyAsString();
-        if (body.contains("insufficient_quota")) {
+    // 503s are treated as not worth retrying by the Kafka consumer; anything else is retried.
+    private ResponseStatusException mapModelError(HttpClientErrorException e) {
+        int status = e.getStatusCode().value();
+        if (status == 429) {
             return new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "AI coach is temporarily unavailable (OpenAI quota exceeded). Check billing at platform.openai.com.");
+                    "AI coach is busy (Gemini free-tier rate limit or daily quota reached). Try again later.");
         }
-        if (e.getStatusCode().value() == 401) {
+        if (status == 401 || status == 403
+                || (status == 400 && e.getResponseBodyAsString().contains("API key"))) {
             return new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "AI coach is not configured (invalid OpenAI API key)");
+                    "AI coach is not configured (invalid Gemini API key)");
         }
         return new ResponseStatusException(
                 HttpStatus.BAD_GATEWAY,
@@ -168,7 +170,7 @@ public class AICoachService {
             }
         }
 
-        prompt.append("\nProvide recommendations in this exact format:\n");
+        prompt.append("\nProvide recommendations in this exact format, as plain text without markdown:\n");
         prompt.append("RECOMMENDATION: [2-3 sentence recommendation]\n");
         prompt.append("FOCUS_AREA: [primary area to focus on]\n");
         prompt.append("NEXT_EXERCISE: [one exercise suggestion for next workout]");
@@ -176,10 +178,12 @@ public class AICoachService {
         return prompt.toString();
     }
 
-    private CoachRecommendationResponse parseResponse(String gptResponse) {
-        String recommendation = extractSection(gptResponse, "RECOMMENDATION:");
-        String focusArea = extractSection(gptResponse, "FOCUS_AREA:");
-        String nextExercise = extractSection(gptResponse, "NEXT_EXERCISE:");
+    private CoachRecommendationResponse parseResponse(String modelReply) {
+        // Models sometimes bold the labels ("**FOCUS_AREA:**") despite the prompt.
+        String reply = modelReply.replace("**", "");
+        String recommendation = extractSection(reply, "RECOMMENDATION:");
+        String focusArea = extractSection(reply, "FOCUS_AREA:");
+        String nextExercise = extractSection(reply, "NEXT_EXERCISE:");
 
         return new CoachRecommendationResponse(
                 recommendation.trim(),

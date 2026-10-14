@@ -1,6 +1,6 @@
 # CaliTrack Backend
 
-Spring Boot 3 API for workout tracking with analytics and OpenAI-powered coaching.
+Spring Boot 3 API for workout tracking with analytics and AI coaching powered by Google Gemini (free tier).
 
 ## Architecture
 
@@ -51,19 +51,19 @@ Public: `GET /health`
 
 ## AI coach
 
-- `GET /api/v1/coach/recommend` — analyses recent workouts via **OpenAI GPT-3.5**
-- Set `OPENAI_API_KEY` in environment or `backend/.env`
+- `GET /api/v1/coach/recommend` — analyses recent workouts via **Google Gemini** (OpenAI-compatible endpoint, free tier)
+- Set `GEMINI_API_KEY` (free from [Google AI Studio](https://aistudio.google.com/apikey)) in environment or `backend/.env`; `GEMINI_MODEL` overrides the default `gemini-3.5-flash-lite`
 - With `calitrack.coach.async-enabled` on, finishing a workout publishes a `WorkoutLogged` event
   to the `workout-logged` topic: JSON, keyed by user ID, sent only after the transaction commits.
   If Kafka is unreachable the request still succeeds and the failure is logged.
 - The `coach-recommender` consumer reads those events, generates a recommendation from the user's
   last 5 workouts and `coach_profiles` entry (defaults if none), and saves it to
-  `coach_recommendations`. Redelivered events are skipped before calling OpenAI.
+  `coach_recommendations`. Redelivered events are skipped before calling Gemini.
 - `GET /api/v1/coach/recommendations/latest` returns the newest saved recommendation and a
   `pending` flag (true for up to 2 minutes after a finished workout that has no recommendation
   yet). `GET`/`PUT /api/v1/coach/profile` read and set the goals and fitness level it uses.
 - Failures are retried 3 times with exponential backoff (1s, 2s, 4s), then sent to
-  `workout-logged.DLT`. Missing key or exhausted quota, and malformed messages, go straight to the DLT.
+  `workout-logged.DLT`. A missing or invalid Gemini key, Gemini's free-tier rate limit or daily quota, and malformed messages go straight to the DLT.
 
 ## Run locally
 

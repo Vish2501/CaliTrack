@@ -119,7 +119,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
     }
 
     @Test
-    void redeliveredEventDoesNotCallOpenAIAgainOrDuplicateTheRecommendation() throws Exception {
+    void redeliveredEventDoesNotCallTheModelAgainOrDuplicateTheRecommendation() throws Exception {
         String userId = "redelivery-user";
         Workout workout = saveFinishedWorkout(userId);
         Workout marker = saveFinishedWorkout(userId);
@@ -156,7 +156,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
         Workout workout = saveFinishedWorkout("quota-user");
         when(coachModelClient.complete(anyString())).thenThrow(HttpClientErrorException.create(
             HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", HttpHeaders.EMPTY,
-            "{\"error\":{\"code\":\"insufficient_quota\"}}".getBytes(StandardCharsets.UTF_8),
+            "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\"}}".getBytes(StandardCharsets.UTF_8),
             StandardCharsets.UTF_8));
 
         send(eventFor(workout));

@@ -70,7 +70,7 @@ public class CoachRecommendationService {
 
     /**
      * Generates and stores the recommendation for a finished workout. Safe to call more than once
-     * for the same workout: a redelivered event is skipped before calling OpenAI, and the unique
+     * for the same workout: a redelivered event is skipped before calling the model, and the unique
      * constraint on workout_id catches two deliveries racing each other.
      */
     public void generateFor(WorkoutLoggedEvent event) {
@@ -87,7 +87,7 @@ public class CoachRecommendationService {
                 event.userId(), WORKOUTS_TO_ANALYSE, profile.goals(), profile.fitnessLevel());
         } catch (ResponseStatusException e) {
             // AICoachService reports configuration and quota problems as 503; anything else
-            // (network errors, OpenAI 5xx, rate limits) is worth retrying.
+            // (network errors, timeouts, Gemini 5xx) is worth retrying.
             if (e.getStatusCode().isSameCodeAs(HttpStatus.SERVICE_UNAVAILABLE)) {
                 throw new NonRetryableCoachException(e.getReason(), e);
             }

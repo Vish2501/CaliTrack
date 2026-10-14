@@ -61,9 +61,12 @@ supabase:
     audience: authenticated
     jwk-set-uri: https://uzyjygnqzrfxgnijiufd.supabase.co/auth/v1/.well-known/jwks.json
 
-# Secrets: set OPENAI_API_KEY in your environment or backend/.env
-openai:
-  api-key: ${OPENAI_API_KEY:}
+# Secrets: set GEMINI_API_KEY (free from Google AI Studio) in your environment or backend/.env
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  # Any free-tier Gemini model; Flash-Lite models usually have the highest free daily limits.
+  model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
+  base-url: https://generativelanguage.googleapis.com/v1beta/openai
 
 calitrack:
   coach:
@@ -73,6 +76,6 @@ calitrack:
     retry:
       initial-interval-ms: 1000
       max-retries: 3
-    # Canned demo replies instead of OpenAI (FakeCoachModelClient). On by default in Docker Compose.
+    # Canned demo replies instead of Gemini (FakeCoachModelClient). On by default in Docker Compose.
     fake-model: ${COACH_FAKE_MODEL:false}
     fake-model-delay-ms: 3000

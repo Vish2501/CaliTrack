@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Walks through the Kafka-backed AI coach against the local Docker Compose stack.
-# Uses the fake model by default, so no OpenAI key or credit is needed.
+# Uses the fake model by default, so no Gemini key is needed.
 #
 #   docker compose up --build -d
 #   export SUPABASE_PUBLISHABLE_KEY=... SUPABASE_EMAIL=... SUPABASE_PASSWORD=...

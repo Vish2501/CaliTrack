@@ -10,7 +10,7 @@ import java.time.Duration;
 @Configuration
 public class AICoachConfig {
 
-    // Without timeouts a stalled OpenAI call would block its thread indefinitely: a request
+    // Without timeouts a stalled Gemini call would block its thread indefinitely: a request
     // thread on the sync path, or the Kafka consumer (and its partitions) on the async path.
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {

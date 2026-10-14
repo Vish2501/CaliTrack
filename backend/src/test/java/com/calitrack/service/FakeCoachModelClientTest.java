@@ -24,7 +24,7 @@ class FakeCoachModelClientTest {
         String reply = client.complete(prompt);
 
         assertThat(reply)
-            .contains("RECOMMENDATION: [Demo reply, no OpenAI call]")
+            .contains("RECOMMENDATION: [Demo reply, no AI call]")
             .contains("build strength goal")
             .contains("FOCUS_AREA: Back")
             .contains("NEXT_EXERCISE: Pull-Up");
