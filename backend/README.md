@@ -44,6 +44,8 @@ Migrations: `src/main/resources/db/migration/`
 | DELETE | `/exercises/{id}` | 204 |
 | POST | `/workouts/{id}/sets` | 201 |
 | GET | `/coach/recommend` | 200 |
+| GET | `/coach/recommendations/latest` | 200 |
+| GET/PUT | `/coach/profile` | 200 |
 
 Public: `GET /health`
 
@@ -57,6 +59,9 @@ Public: `GET /health`
 - The `coach-recommender` consumer reads those events, generates a recommendation from the user's
   last 5 workouts and `coach_profiles` entry (defaults if none), and saves it to
   `coach_recommendations`. Redelivered events are skipped before calling OpenAI.
+- `GET /api/v1/coach/recommendations/latest` returns the newest saved recommendation and a
+  `pending` flag (true for up to 2 minutes after a finished workout that has no recommendation
+  yet). `GET`/`PUT /api/v1/coach/profile` read and set the goals and fitness level it uses.
 - Failures are retried 3 times with exponential backoff (1s, 2s, 4s), then sent to
   `workout-logged.DLT`. Missing key or exhausted quota, and malformed messages, go straight to the DLT.
 

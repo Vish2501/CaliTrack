@@ -17,6 +17,8 @@ public interface WorkoutRepository extends JpaRepository<Workout, Long> {
 
         Optional<Workout> findByIdAndUserId(Long id, String userId);
 
+        Optional<Workout> findFirstByUserIdAndEndTimeIsNotNullOrderByEndTimeDesc(String userId);
+
         @Query(value = """
                         SELECT CAST(date_trunc('week', w.start_time) AS date) AS weekStart,
                                    COUNT(*) AS workoutCount
