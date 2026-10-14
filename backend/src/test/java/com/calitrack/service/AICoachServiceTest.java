@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 class AICoachServiceTest {
 
     @Mock
-    private OpenAIChatClient openAIChatClient;
+    private CoachModelClient coachModelClient;
 
     @Mock
     private WorkoutService workoutService;
@@ -42,7 +42,7 @@ class AICoachServiceTest {
     @BeforeEach
     void setUp() {
         aiCoachService = new AICoachService(
-            openAIChatClient,
+            coachModelClient,
             workoutService,
             setRepository,
             exerciseRepository
@@ -51,7 +51,7 @@ class AICoachServiceTest {
 
     @Test
     void getRecommendationThrowsWhenApiKeyMissing() {
-        when(openAIChatClient.isConfigured()).thenReturn(false);
+        when(coachModelClient.isConfigured()).thenReturn(false);
 
         CoachRecommendationRequest request = new CoachRecommendationRequest(
             List.of(),
@@ -66,8 +66,8 @@ class AICoachServiceTest {
 
     @Test
     void getRecommendationParsesOpenAiResponse() {
-        when(openAIChatClient.isConfigured()).thenReturn(true);
-        when(openAIChatClient.complete(anyString())).thenReturn("""
+        when(coachModelClient.isConfigured()).thenReturn(true);
+        when(coachModelClient.complete(anyString())).thenReturn("""
             RECOMMENDATION: Add more pulling volume this week.
             FOCUS_AREA: Back and biceps
             NEXT_EXERCISE: Chin-Up
@@ -118,8 +118,8 @@ class AICoachServiceTest {
         when(workoutService.getWorkoutsForUser("user-1")).thenReturn(List.of(activeWorkout, completedWorkout));
         when(setRepository.findByWorkoutId(1L)).thenReturn(List.of(firstSet, secondSet));
         when(exerciseRepository.findAllById(List.of(10L))).thenReturn(List.of(exercise));
-        when(openAIChatClient.isConfigured()).thenReturn(true);
-        when(openAIChatClient.complete(anyString())).thenReturn("""
+        when(coachModelClient.isConfigured()).thenReturn(true);
+        when(coachModelClient.complete(anyString())).thenReturn("""
             RECOMMENDATION: Keep progressing your pulling work.
             FOCUS_AREA: Back
             NEXT_EXERCISE: Pull-Up

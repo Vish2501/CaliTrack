@@ -1,6 +1,7 @@
 package com.calitrack.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -16,7 +17,8 @@ import java.util.Map;
  * family on HTTP or network failure; callers decide how to map or retry them.
  */
 @Component
-public class OpenAIChatClient {
+@ConditionalOnProperty(name = "calitrack.coach.fake-model", havingValue = "false", matchIfMissing = true)
+public class OpenAIChatClient implements CoachModelClient {
 
     private static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
     private static final String MODEL = "gpt-3.5-turbo";
@@ -29,10 +31,12 @@ public class OpenAIChatClient {
         this.openaiApiKey = openaiApiKey;
     }
 
+    @Override
     public boolean isConfigured() {
         return openaiApiKey != null && !openaiApiKey.isBlank();
     }
 
+    @Override
     public String complete(String prompt) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

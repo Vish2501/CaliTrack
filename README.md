@@ -69,6 +69,34 @@ docker compose up --build
 - Postgres: `localhost:5432` (user/password/db: `calitrack`)
 - Kafka: `localhost:9092` (single-node KRaft; the backend creates its topics on startup)
 
+## Demo the AI coach locally (no OpenAI needed)
+
+Docker Compose runs the coach with a fake model by default: replies are canned, labelled
+`[Demo reply, no OpenAI call]`, and arrive after ~3s so the app's "generating" state is visible.
+Everything else is real: the API, Kafka, the consumer and Postgres.
+
+```bash
+docker compose up --build -d
+```
+
+**Terminal walkthrough** (start, log sets, finish, see the Kafka event, poll the result):
+
+```bash
+export SUPABASE_PUBLISHABLE_KEY=... SUPABASE_EMAIL=... SUPABASE_PASSWORD=...
+TOKEN=$(backend/scripts/get-token.sh) scripts/demo-coach.sh
+```
+
+**Mobile app against the local backend** (iOS Simulator; on a physical phone use your machine's
+LAN IP instead of `localhost`):
+
+```bash
+cd mobile
+EXPO_PUBLIC_API_URL=http://localhost:8080 npx expo start --ios
+```
+
+Finish a workout, open the Coach tab, and the recommendation appears after a few seconds.
+To use real OpenAI instead: `COACH_FAKE_MODEL=false OPENAI_API_KEY=sk-... docker compose up -d`.
+
 ## Tests
 
 ```bash

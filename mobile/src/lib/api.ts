@@ -2,7 +2,9 @@ import { ExerciseEntry } from "../types/workout";
 import { supabase } from "./supabase";
 import { trackApiTiming, trackProductEvent } from "./telemetry";
 
-const BASE_URL = "https://calitrack-api.onrender.com";
+// Set EXPO_PUBLIC_API_URL (e.g. http://localhost:8080) to run against a local backend.
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? "https://calitrack-api.onrender.com";
 const API_V1 = `${BASE_URL}/api/v1`;
 
 const DEFAULT_EXERCISES = [

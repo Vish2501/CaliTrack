@@ -73,3 +73,6 @@ calitrack:
     retry:
       initial-interval-ms: 1000
       max-retries: 3
+    # Canned demo replies instead of OpenAI (FakeCoachModelClient). On by default in Docker Compose.
+    fake-model: ${COACH_FAKE_MODEL:false}
+    fake-model-delay-ms: 3000
