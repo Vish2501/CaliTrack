@@ -26,8 +26,8 @@ Tab order in app:
 
 ## Tech Stack
 
-- React Native 0.83
-- Expo 55
+- React Native 0.86
+- Expo SDK 57
 - TypeScript
 - React Navigation (bottom tabs + native stack)
 - Supabase Auth (`@supabase/supabase-js`)
