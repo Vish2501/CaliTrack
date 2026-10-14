@@ -80,7 +80,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
 
     @BeforeEach
     void configureModel() {
-        when(openAIChatClient.isConfigured()).thenReturn(true);
+        when(coachModelClient.isConfigured()).thenReturn(true);
     }
 
     @Test
@@ -91,7 +91,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
         profile.setGoals("strength");
         profile.setFitnessLevel("beginner");
         profileRepository.save(profile);
-        when(openAIChatClient.complete(anyString())).thenReturn(MODEL_REPLY);
+        when(coachModelClient.complete(anyString())).thenReturn(MODEL_REPLY);
 
         String startResponse = mockMvc.perform(post("/api/v1/workouts")
                 .with(jwt().jwt(j -> j.subject(userId))))
@@ -114,7 +114,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
         assertThat(saved.getNextExercise()).isEqualTo("Chin-Up");
 
         ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
-        verify(openAIChatClient).complete(prompt.capture());
+        verify(coachModelClient).complete(prompt.capture());
         assertThat(prompt.getValue()).contains("Goals: strength").contains("Fitness Level: beginner");
     }
 
@@ -123,7 +123,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
         String userId = "redelivery-user";
         Workout workout = saveFinishedWorkout(userId);
         Workout marker = saveFinishedWorkout(userId);
-        when(openAIChatClient.complete(anyString())).thenReturn(MODEL_REPLY);
+        when(coachModelClient.complete(anyString())).thenReturn(MODEL_REPLY);
 
         send(eventFor(workout));
         send(eventFor(workout));
@@ -135,26 +135,26 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
         assertThat(recommendationRepository.findAll())
             .filteredOn(r -> r.getWorkoutId().equals(workout.getId()))
             .hasSize(1);
-        verify(openAIChatClient, times(2)).complete(anyString());
+        verify(coachModelClient, times(2)).complete(anyString());
     }
 
     @Test
     void transientFailureIsRetriedAndThenSucceeds() throws Exception {
         Workout workout = saveFinishedWorkout("retry-user");
-        when(openAIChatClient.complete(anyString()))
+        when(coachModelClient.complete(anyString()))
             .thenThrow(new ResourceAccessException("Read timed out"))
             .thenReturn(MODEL_REPLY);
 
         send(eventFor(workout));
 
         await().atMost(TIMEOUT).until(() -> recommendationRepository.existsByWorkoutId(workout.getId()));
-        verify(openAIChatClient, times(2)).complete(anyString());
+        verify(coachModelClient, times(2)).complete(anyString());
     }
 
     @Test
     void quotaErrorSkipsRetriesAndGoesToTheDeadLetterTopic() throws Exception {
         Workout workout = saveFinishedWorkout("quota-user");
-        when(openAIChatClient.complete(anyString())).thenThrow(HttpClientErrorException.create(
+        when(coachModelClient.complete(anyString())).thenThrow(HttpClientErrorException.create(
             HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", HttpHeaders.EMPTY,
             "{\"error\":{\"code\":\"insufficient_quota\"}}".getBytes(StandardCharsets.UTF_8),
             StandardCharsets.UTF_8));
@@ -164,20 +164,20 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
         ConsumerRecord<String, String> dead = awaitDeadLetter("\"workoutId\":" + workout.getId());
         assertThat(header(dead, "kafka_dlt-exception-cause-fqcn"))
             .isEqualTo(NonRetryableCoachException.class.getName());
-        verify(openAIChatClient, times(1)).complete(anyString());
+        verify(coachModelClient, times(1)).complete(anyString());
         assertThat(recommendationRepository.existsByWorkoutId(workout.getId())).isFalse();
     }
 
     @Test
     void persistentFailureGoesToTheDeadLetterTopicAfterThreeRetries() throws Exception {
         Workout workout = saveFinishedWorkout("outage-user");
-        when(openAIChatClient.complete(anyString())).thenThrow(new ResourceAccessException("Connection refused"));
+        when(coachModelClient.complete(anyString())).thenThrow(new ResourceAccessException("Connection refused"));
 
         send(eventFor(workout));
 
         ConsumerRecord<String, String> dead = awaitDeadLetter("\"workoutId\":" + workout.getId());
         assertThat(dead.key()).isEqualTo("outage-user");
-        verify(openAIChatClient, times(4)).complete(anyString());
+        verify(coachModelClient, times(4)).complete(anyString());
         assertThat(recommendationRepository.existsByWorkoutId(workout.getId())).isFalse();
     }
 
@@ -185,7 +185,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
     void malformedMessageGoesToTheDeadLetterTopicAndDoesNotBlockTheConsumer() throws Exception {
         String userId = "poison-user";
         Workout next = saveFinishedWorkout(userId);
-        when(openAIChatClient.complete(anyString())).thenReturn(MODEL_REPLY);
+        when(coachModelClient.complete(anyString())).thenReturn(MODEL_REPLY);
 
         try (KafkaProducer<String, String> raw = new KafkaProducer<>(
                 Map.of(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers()),

@@ -1,6 +1,6 @@
 package com.calitrack.support;
 
-import com.calitrack.service.OpenAIChatClient;
+import com.calitrack.service.CoachModelClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -22,5 +22,5 @@ public abstract class AbstractKafkaIntegrationTest extends AbstractIntegrationTe
 
     // The consumer runs in every Kafka test context; never let it call the real OpenAI API.
     @MockBean
-    protected OpenAIChatClient openAIChatClient;
+    protected CoachModelClient coachModelClient;
 }

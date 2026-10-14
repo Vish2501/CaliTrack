@@ -22,18 +22,18 @@ import java.util.stream.Collectors;
 @Service
 public class AICoachService {
 
-    private final OpenAIChatClient openAIChatClient;
+    private final CoachModelClient coachModelClient;
     private final WorkoutService workoutService;
     private final SetRepository setRepository;
     private final ExerciseRepository exerciseRepository;
 
     private static final DateTimeFormatter WORKOUT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public AICoachService(OpenAIChatClient openAIChatClient,
+    public AICoachService(CoachModelClient coachModelClient,
             WorkoutService workoutService,
             SetRepository setRepository,
             ExerciseRepository exerciseRepository) {
-        this.openAIChatClient = openAIChatClient;
+        this.coachModelClient = coachModelClient;
         this.workoutService = workoutService;
         this.setRepository = setRepository;
         this.exerciseRepository = exerciseRepository;
@@ -61,7 +61,7 @@ public class AICoachService {
     }
 
     public CoachRecommendationResponse getRecommendation(CoachRecommendationRequest request) {
-        if (!openAIChatClient.isConfigured()) {
+        if (!coachModelClient.isConfigured()) {
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "AI coach is not configured (missing OPENAI_API_KEY)");
@@ -69,7 +69,7 @@ public class AICoachService {
 
         try {
             String prompt = buildPrompt(request);
-            String gptResponse = openAIChatClient.complete(prompt);
+            String gptResponse = coachModelClient.complete(prompt);
             return parseResponse(gptResponse);
         } catch (HttpClientErrorException e) {
             throw mapOpenAIError(e);
