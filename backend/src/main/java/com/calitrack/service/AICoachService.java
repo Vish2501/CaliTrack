@@ -1,6 +1,5 @@
 package com.calitrack.service;
 
-import com.calitrack.dto.CoachRecommendationRequest;
 import com.calitrack.dto.CoachRecommendationResponse;
 import com.calitrack.entity.Exercise;
 import com.calitrack.entity.Set;
@@ -44,7 +43,7 @@ public class AICoachService {
             int numWorkouts,
             String userGoals,
             String fitnessLevel) {
-        List<CoachRecommendationRequest.WorkoutSummary> workoutSummaries = workoutService.getWorkoutsForUser(userId)
+        List<CoachPromptInput.WorkoutSummary> workoutSummaries = workoutService.getWorkoutsForUser(userId)
                 .stream()
                 .filter(workout -> workout.getEndTime() != null)
                 .sorted(Comparator.comparing(Workout::getEndTime).reversed())
@@ -52,15 +51,17 @@ public class AICoachService {
                 .map(this::buildWorkoutSummary)
                 .toList();
 
-        CoachRecommendationRequest request = new CoachRecommendationRequest(
+        CoachPromptInput input = new CoachPromptInput(
                 workoutSummaries,
                 userGoals,
                 fitnessLevel);
 
-        return getRecommendation(request);
+        return getRecommendation(input);
     }
 
-    public CoachRecommendationResponse getRecommendation(CoachRecommendationRequest request) {
+    // Package-private: callers go through getAutoRecommendation, which builds the input from the
+    // user's own data.
+    CoachRecommendationResponse getRecommendation(CoachPromptInput input) {
         if (!coachModelClient.isConfigured()) {
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
@@ -68,7 +69,7 @@ public class AICoachService {
         }
 
         try {
-            String prompt = buildPrompt(request);
+            String prompt = buildPrompt(input);
             String modelReply = coachModelClient.complete(prompt);
             return parseResponse(modelReply);
         } catch (HttpClientErrorException e) {
@@ -81,7 +82,7 @@ public class AICoachService {
         }
     }
 
-    private CoachRecommendationRequest.WorkoutSummary buildWorkoutSummary(Workout workout) {
+    private CoachPromptInput.WorkoutSummary buildWorkoutSummary(Workout workout) {
         List<Set> sets = setRepository.findByWorkoutId(workout.getId());
         Map<Long, Exercise> exerciseMap = exerciseRepository.findAllById(
                 sets.stream().map(Set::getExerciseId).distinct().toList()).stream()
@@ -90,18 +91,18 @@ public class AICoachService {
         Map<Long, List<Set>> setsByExercise = sets.stream()
                 .collect(Collectors.groupingBy(Set::getExerciseId));
 
-        List<CoachRecommendationRequest.WorkoutSummary.ExerciseSummary> exerciseSummaries = setsByExercise.entrySet()
+        List<CoachPromptInput.ExerciseSummary> exerciseSummaries = setsByExercise.entrySet()
                 .stream()
                 .filter(entry -> exerciseMap.containsKey(entry.getKey()))
                 .map(entry -> buildExerciseSummary(exerciseMap.get(entry.getKey()), entry.getValue()))
                 .toList();
 
-        return new CoachRecommendationRequest.WorkoutSummary(
+        return new CoachPromptInput.WorkoutSummary(
                 workout.getStartTime().format(WORKOUT_DATE_FORMATTER),
                 exerciseSummaries);
     }
 
-    private CoachRecommendationRequest.WorkoutSummary.ExerciseSummary buildExerciseSummary(
+    private CoachPromptInput.ExerciseSummary buildExerciseSummary(
             Exercise exercise,
             List<Set> sets) {
         double avgReps = sets.stream()
@@ -119,7 +120,7 @@ public class AICoachService {
                 .average()
                 .orElse(0);
 
-        return new CoachRecommendationRequest.WorkoutSummary.ExerciseSummary(
+        return new CoachPromptInput.ExerciseSummary(
                 exercise.getName(),
                 exercise.getCategory(),
                 sets.size(),
@@ -147,20 +148,20 @@ public class AICoachService {
                 "AI coach request failed: " + e.getStatusText());
     }
 
-    private String buildPrompt(CoachRecommendationRequest request) {
+    private String buildPrompt(CoachPromptInput input) {
         StringBuilder prompt = new StringBuilder();
 
         prompt.append("You are an expert fitness coach. Based on the user's recent workout history, ");
         prompt.append("provide personalized recommendations.\n\n");
 
         prompt.append("User Profile:\n");
-        prompt.append("- Fitness Level: ").append(request.fitnessLevel()).append("\n");
-        prompt.append("- Goals: ").append(request.userGoals()).append("\n\n");
+        prompt.append("- Fitness Level: ").append(input.fitnessLevel()).append("\n");
+        prompt.append("- Goals: ").append(input.userGoals()).append("\n\n");
 
         prompt.append("Recent Workouts:\n");
-        for (CoachRecommendationRequest.WorkoutSummary workout : request.recentWorkouts()) {
+        for (CoachPromptInput.WorkoutSummary workout : input.recentWorkouts()) {
             prompt.append("- Date: ").append(workout.date()).append("\n");
-            for (CoachRecommendationRequest.WorkoutSummary.ExerciseSummary exercise : workout.exercises()) {
+            for (CoachPromptInput.ExerciseSummary exercise : workout.exercises()) {
                 prompt.append("  * ").append(exercise.name())
                         .append(" (").append(exercise.category()).append(")")
                         .append(": ").append(exercise.totalSets()).append(" sets, ")
