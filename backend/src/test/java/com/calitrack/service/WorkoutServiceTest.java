@@ -4,6 +4,7 @@ import com.calitrack.dto.WorkoutDetailsResponse;
 import com.calitrack.entity.Exercise;
 import com.calitrack.entity.Set;
 import com.calitrack.entity.Workout;
+import com.calitrack.event.WorkoutLoggedEvent;
 import com.calitrack.repository.ExerciseRepository;
 import com.calitrack.repository.SetRepository;
 import com.calitrack.repository.WorkoutRepository;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -21,6 +23,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +38,9 @@ class WorkoutServiceTest {
 
     @Mock
     private ExerciseRepository exerciseRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private WorkoutService workoutService;
@@ -92,5 +98,31 @@ class WorkoutServiceTest {
         assertThatThrownBy(() -> workoutService.getWorkoutDetails(99L, "user-1"))
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("Workout not found");
+    }
+
+    @Test
+    void finishWorkoutSetsEndTimeAndPublishesWorkoutLogged() {
+        Workout workout = new Workout();
+        workout.setId(10L);
+        workout.setUserId("user-1");
+        workout.setStartTime(LocalDateTime.now().minusHours(1));
+        LocalDateTime endedAt = LocalDateTime.now();
+
+        when(workoutRepository.findByIdAndUserId(10L, "user-1")).thenReturn(Optional.of(workout));
+        when(workoutRepository.save(workout)).thenReturn(workout);
+
+        Workout result = workoutService.finishWorkout(10L, "user-1", endedAt);
+
+        assertThat(result.getEndTime()).isEqualTo(endedAt);
+        verify(eventPublisher).publishEvent(new WorkoutLoggedEvent(10L, "user-1", endedAt));
+    }
+
+    @Test
+    void finishWorkoutPublishesNothingWhenWorkoutNotFound() {
+        when(workoutRepository.findByIdAndUserId(99L, "user-1")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> workoutService.finishWorkout(99L, "user-1", null))
+            .isInstanceOf(ResponseStatusException.class);
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }
