@@ -3,6 +3,15 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      data-source-properties:
+        # Production connects through Supabase's transaction pooler (port 6543), which can give
+        # each transaction a different server connection. After a query runs 5 times, the
+        # Postgres driver switches it to a server-side prepared statement tied to one connection,
+        # so queries then fail with "prepared statement S_n already exists / does not exist":
+        # every endpoint started returning 500s a few minutes after each restart. 0 turns those
+        # off. Set here rather than in SPRING_DATASOURCE_URL so a URL change can't drop it.
+        prepareThreshold: 0
 
   flyway:
     enabled: true
