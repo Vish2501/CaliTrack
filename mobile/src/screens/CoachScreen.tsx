@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,17 +8,86 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import {
+  getCoachProfile,
   getCoachRecommendation,
+  getLatestCoachRecommendation,
+  updateCoachProfile,
   CoachRecommendationResponse,
 } from "../lib/api";
 
+const PENDING_POLL_MS = 3000;
+
+type DisplayedRecommendation = CoachRecommendationResponse & {
+  createdAt?: string;
+};
+
 export default function CoachScreen() {
   const [recommendation, setRecommendation] =
-    useState<CoachRecommendationResponse | null>(null);
+    useState<DisplayedRecommendation | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState(false);
   const [fitnessLevel, setFitnessLevel] = useState("intermediate");
   const [userGoals, setUserGoals] = useState("general fitness");
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      (async () => {
+        try {
+          const [profile, latest] = await Promise.all([
+            getCoachProfile(),
+            getLatestCoachRecommendation(),
+          ]);
+          if (!active) return;
+          setUserGoals(profile.goals);
+          setFitnessLevel(profile.fitnessLevel);
+          if (latest.recommendation) setRecommendation(latest.recommendation);
+          setPending(latest.pending);
+        } catch {
+          // Offline, or an API without these endpoints yet: keep the defaults and the
+          // manual "Get Recommendation" button.
+        }
+      })();
+
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  // While the backend generates a recommendation for a just-finished workout, check back until
+  // it lands. The server stops reporting pending after a couple of minutes, which ends the loop.
+  useEffect(() => {
+    if (!pending) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const latest = await getLatestCoachRecommendation();
+        if (latest.recommendation) setRecommendation(latest.recommendation);
+        setPending(latest.pending);
+      } catch {
+        // Try again on the next tick.
+      }
+    }, PENDING_POLL_MS);
+
+    return () => clearInterval(timer);
+  }, [pending]);
+
+  const saveProfile = async (goals: string, level: string) => {
+    setUserGoals(goals);
+    setFitnessLevel(level);
+    try {
+      await updateCoachProfile({ goals, fitnessLevel: level });
+    } catch (error) {
+      Alert.alert(
+        "Couldn't save coach settings",
+        error instanceof Error ? error.message : "Please try again",
+      );
+    }
+  };
 
   const fetchRecommendation = async () => {
     setLoading(true);
@@ -65,7 +134,7 @@ export default function CoachScreen() {
               {fitnessLevels.map((level) => (
                 <Pressable
                   key={level}
-                  onPress={() => setFitnessLevel(level)}
+                  onPress={() => saveProfile(userGoals, level)}
                   className={`flex-1 py-2 px-3 rounded-md ${
                     fitnessLevel === level
                       ? "bg-blue-500"
@@ -92,7 +161,7 @@ export default function CoachScreen() {
               {goalOptions.map((goal) => (
                 <Pressable
                   key={goal}
-                  onPress={() => setUserGoals(goal)}
+                  onPress={() => saveProfile(goal, fitnessLevel)}
                   className={`py-2 px-3 rounded-md ${
                     userGoals === goal
                       ? "bg-blue-500"
@@ -127,9 +196,26 @@ export default function CoachScreen() {
           )}
         </Pressable>
 
+        {/* Background generation in progress */}
+        {pending && (
+          <View className="flex-row items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <ActivityIndicator />
+            <Text className="flex-1 text-blue-900">
+              Generating a recommendation from your latest workout…
+            </Text>
+          </View>
+        )}
+
         {/* Recommendation Display */}
         {recommendation && (
           <View className="gap-4">
+            {recommendation.createdAt && (
+              <Text className="text-xs text-gray-500">
+                Based on your workout on{" "}
+                {new Date(recommendation.createdAt).toLocaleDateString()}
+              </Text>
+            )}
+
             {/* Main Recommendation */}
             <View className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <Text className="text-sm font-semibold text-blue-900 mb-2">
@@ -163,11 +249,11 @@ export default function CoachScreen() {
         )}
 
         {/* Empty State */}
-        {!recommendation && !loading && (
+        {!recommendation && !loading && !pending && (
           <View className="mt-8 items-center">
             <Text className="text-gray-500 text-center">
-              Click "Get Recommendation" to see AI-powered coaching advice based
-              on your recent workouts
+              Finish a workout and your coach will suggest what to do next, or
+              tap "Get Recommendation" for advice based on your recent workouts
             </Text>
           </View>
         )}

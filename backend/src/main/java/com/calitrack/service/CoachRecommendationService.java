@@ -1,18 +1,24 @@
 package com.calitrack.service;
 
+import com.calitrack.dto.CoachProfileResponse;
 import com.calitrack.dto.CoachRecommendationResponse;
-import com.calitrack.entity.CoachProfile;
+import com.calitrack.dto.LatestCoachRecommendationResponse;
+import com.calitrack.dto.SavedCoachRecommendationResponse;
 import com.calitrack.entity.CoachRecommendation;
 import com.calitrack.event.WorkoutLoggedEvent;
 import com.calitrack.exception.NonRetryableCoachException;
-import com.calitrack.repository.CoachProfileRepository;
 import com.calitrack.repository.CoachRecommendationRepository;
+import com.calitrack.repository.WorkoutRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 @Service
 public class CoachRecommendationService {
@@ -20,19 +26,46 @@ public class CoachRecommendationService {
     private static final Logger log = LoggerFactory.getLogger(CoachRecommendationService.class);
 
     private static final int WORKOUTS_TO_ANALYSE = 5;
-    private static final String DEFAULT_GOALS = "general fitness";
-    private static final String DEFAULT_FITNESS_LEVEL = "intermediate";
+    // Long enough to cover retries with backoff; after that an event has most likely gone to the
+    // DLT, and the app should stop showing "generating".
+    static final Duration PENDING_WINDOW = Duration.ofMinutes(2);
 
     private final AICoachService aiCoachService;
+    private final CoachProfileService coachProfileService;
     private final CoachRecommendationRepository recommendationRepository;
-    private final CoachProfileRepository profileRepository;
+    private final WorkoutRepository workoutRepository;
+    private final boolean asyncEnabled;
 
     public CoachRecommendationService(AICoachService aiCoachService,
+                                      CoachProfileService coachProfileService,
                                       CoachRecommendationRepository recommendationRepository,
-                                      CoachProfileRepository profileRepository) {
+                                      WorkoutRepository workoutRepository,
+                                      @Value("${calitrack.coach.async-enabled}") boolean asyncEnabled) {
         this.aiCoachService = aiCoachService;
+        this.coachProfileService = coachProfileService;
         this.recommendationRepository = recommendationRepository;
-        this.profileRepository = profileRepository;
+        this.workoutRepository = workoutRepository;
+        this.asyncEnabled = asyncEnabled;
+    }
+
+    public LatestCoachRecommendationResponse getLatest(String userId) {
+        SavedCoachRecommendationResponse latest = recommendationRepository.findFirstByUserIdOrderByIdDesc(userId)
+            .map(r -> new SavedCoachRecommendationResponse(
+                r.getWorkoutId(), r.getRecommendation(), r.getFocusArea(), r.getNextExercise(), r.getCreatedAt()))
+            .orElse(null);
+        return new LatestCoachRecommendationResponse(latest, isPending(userId));
+    }
+
+    // True when the user's most recently finished workout has no recommendation yet and was
+    // finished recently enough that the consumer may still be working on it.
+    private boolean isPending(String userId) {
+        if (!asyncEnabled) {
+            return false;
+        }
+        return workoutRepository.findFirstByUserIdAndEndTimeIsNotNullOrderByEndTimeDesc(userId)
+            .filter(workout -> workout.getEndTime().isAfter(LocalDateTime.now().minus(PENDING_WINDOW)))
+            .map(workout -> !recommendationRepository.existsByWorkoutId(workout.getId()))
+            .orElse(false);
     }
 
     /**
@@ -46,14 +79,12 @@ public class CoachRecommendationService {
             return;
         }
 
-        CoachProfile profile = profileRepository.findById(event.userId()).orElse(null);
-        String goals = profile != null ? profile.getGoals() : DEFAULT_GOALS;
-        String fitnessLevel = profile != null ? profile.getFitnessLevel() : DEFAULT_FITNESS_LEVEL;
+        CoachProfileResponse profile = coachProfileService.getProfile(event.userId());
 
         CoachRecommendationResponse response;
         try {
             response = aiCoachService.getAutoRecommendation(
-                event.userId(), WORKOUTS_TO_ANALYSE, goals, fitnessLevel);
+                event.userId(), WORKOUTS_TO_ANALYSE, profile.goals(), profile.fitnessLevel());
         } catch (ResponseStatusException e) {
             // AICoachService reports configuration and quota problems as 503; anything else
             // (network errors, OpenAI 5xx, rate limits) is worth retrying.

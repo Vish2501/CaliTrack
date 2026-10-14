@@ -67,6 +67,21 @@ export type CoachRecommendationResponse = {
   suggestedNextExercise: string;
 };
 
+export type SavedCoachRecommendation = CoachRecommendationResponse & {
+  workoutId: number;
+  createdAt: string;
+};
+
+export type LatestCoachRecommendationResponse = {
+  recommendation: SavedCoachRecommendation | null;
+  pending: boolean;
+};
+
+export type CoachProfile = {
+  goals: string;
+  fitnessLevel: string;
+};
+
 async function authHeaders(includeJson = false) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -347,4 +362,54 @@ export async function getCoachRecommendation(
   }
 
   return (await res.json()) as CoachRecommendationResponse;
+}
+
+export async function getLatestCoachRecommendation() {
+  const res = await fetchWithTiming(
+    "get_latest_coach_recommendation",
+    `${API_V1}/coach/recommendations/latest`,
+    {
+      headers: await authHeaders(),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseApiError(res));
+  }
+
+  return (await res.json()) as LatestCoachRecommendationResponse;
+}
+
+export async function getCoachProfile() {
+  const res = await fetchWithTiming(
+    "get_coach_profile",
+    `${API_V1}/coach/profile`,
+    {
+      headers: await authHeaders(),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseApiError(res));
+  }
+
+  return (await res.json()) as CoachProfile;
+}
+
+export async function updateCoachProfile(profile: CoachProfile) {
+  const res = await fetchWithTiming(
+    "update_coach_profile",
+    `${API_V1}/coach/profile`,
+    {
+      method: "PUT",
+      headers: await authHeaders(true),
+      body: JSON.stringify(profile),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseApiError(res));
+  }
+
+  return (await res.json()) as CoachProfile;
 }
