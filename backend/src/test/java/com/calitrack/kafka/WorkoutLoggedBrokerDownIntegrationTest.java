@@ -22,7 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
     "calitrack.coach.async-enabled=true",
     "spring.kafka.bootstrap-servers=localhost:1",
-    "spring.kafka.admin.auto-create=false"
+    "spring.kafka.admin.auto-create=false",
+    "spring.kafka.listener.auto-startup=false"
 })
 class WorkoutLoggedBrokerDownIntegrationTest extends AbstractIntegrationTest {
 

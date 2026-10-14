@@ -7,20 +7,14 @@ import com.calitrack.entity.Set;
 import com.calitrack.entity.Workout;
 import com.calitrack.repository.ExerciseRepository;
 import com.calitrack.repository.SetRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,26 +22,21 @@ import java.util.stream.Collectors;
 @Service
 public class AICoachService {
 
-    private final RestTemplate restTemplate;
+    private final OpenAIChatClient openAIChatClient;
     private final WorkoutService workoutService;
     private final SetRepository setRepository;
     private final ExerciseRepository exerciseRepository;
-    private final String openaiApiKey;
 
-    private static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
-    private static final String MODEL = "gpt-3.5-turbo";
     private static final DateTimeFormatter WORKOUT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public AICoachService(RestTemplate restTemplate,
+    public AICoachService(OpenAIChatClient openAIChatClient,
             WorkoutService workoutService,
             SetRepository setRepository,
-            ExerciseRepository exerciseRepository,
-            @Value("${openai.api-key}") String openaiApiKey) {
-        this.restTemplate = restTemplate;
+            ExerciseRepository exerciseRepository) {
+        this.openAIChatClient = openAIChatClient;
         this.workoutService = workoutService;
         this.setRepository = setRepository;
         this.exerciseRepository = exerciseRepository;
-        this.openaiApiKey = openaiApiKey;
     }
 
     public CoachRecommendationResponse getAutoRecommendation(
@@ -72,7 +61,7 @@ public class AICoachService {
     }
 
     public CoachRecommendationResponse getRecommendation(CoachRecommendationRequest request) {
-        if (openaiApiKey == null || openaiApiKey.isBlank()) {
+        if (!openAIChatClient.isConfigured()) {
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "AI coach is not configured (missing OPENAI_API_KEY)");
@@ -80,7 +69,7 @@ public class AICoachService {
 
         try {
             String prompt = buildPrompt(request);
-            String gptResponse = callOpenAIAPI(prompt);
+            String gptResponse = openAIChatClient.complete(prompt);
             return parseResponse(gptResponse);
         } catch (HttpClientErrorException e) {
             throw mapOpenAIError(e);
@@ -185,44 +174,6 @@ public class AICoachService {
         prompt.append("NEXT_EXERCISE: [one exercise suggestion for next workout]");
 
         return prompt.toString();
-    }
-
-    private String callOpenAIAPI(String prompt) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + openaiApiKey);
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", MODEL);
-        requestBody.put("temperature", 0.7);
-        requestBody.put("max_tokens", 500);
-        requestBody.put("messages", List.of(
-                Map.of(
-                        "role", "system",
-                        "content",
-                        "You are a professional fitness coach providing personalized workout recommendations."),
-                Map.of(
-                        "role", "user",
-                        "content", prompt)));
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> response = restTemplate.postForObject(OPENAI_API_URL, entity, Map.class);
-
-        if (response == null || !response.containsKey("choices")) {
-            throw new RuntimeException("Invalid response from OpenAI API");
-        }
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
-        if (choices.isEmpty()) {
-            throw new RuntimeException("No choices returned from OpenAI API");
-        }
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-        return (String) message.get("content");
     }
 
     private CoachRecommendationResponse parseResponse(String gptResponse) {

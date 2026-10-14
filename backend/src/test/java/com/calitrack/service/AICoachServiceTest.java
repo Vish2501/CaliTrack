@@ -12,25 +12,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AICoachServiceTest {
 
     @Mock
-    private RestTemplate restTemplate;
+    private OpenAIChatClient openAIChatClient;
 
     @Mock
     private WorkoutService workoutService;
@@ -46,23 +42,16 @@ class AICoachServiceTest {
     @BeforeEach
     void setUp() {
         aiCoachService = new AICoachService(
-            restTemplate,
+            openAIChatClient,
             workoutService,
             setRepository,
-            exerciseRepository,
-            "test-key"
+            exerciseRepository
         );
     }
 
     @Test
     void getRecommendationThrowsWhenApiKeyMissing() {
-        aiCoachService = new AICoachService(
-            restTemplate,
-            workoutService,
-            setRepository,
-            exerciseRepository,
-            ""
-        );
+        when(openAIChatClient.isConfigured()).thenReturn(false);
 
         CoachRecommendationRequest request = new CoachRecommendationRequest(
             List.of(),
@@ -77,21 +66,12 @@ class AICoachServiceTest {
 
     @Test
     void getRecommendationParsesOpenAiResponse() {
-        Map<String, Object> openAiResponse = Map.of(
-            "choices", List.of(
-                Map.of(
-                    "message", Map.of(
-                        "content", """
-                            RECOMMENDATION: Add more pulling volume this week.
-                            FOCUS_AREA: Back and biceps
-                            NEXT_EXERCISE: Chin-Up
-                            """
-                    )
-                )
-            )
-        );
-
-        when(restTemplate.postForObject(anyString(), any(), eq(Map.class))).thenReturn(openAiResponse);
+        when(openAIChatClient.isConfigured()).thenReturn(true);
+        when(openAIChatClient.complete(anyString())).thenReturn("""
+            RECOMMENDATION: Add more pulling volume this week.
+            FOCUS_AREA: Back and biceps
+            NEXT_EXERCISE: Chin-Up
+            """);
 
         CoachRecommendationResponse response = aiCoachService.getRecommendation(
             new CoachRecommendationRequest(List.of(), "strength", "intermediate")
@@ -135,24 +115,15 @@ class AICoachServiceTest {
         secondSet.setWeight(0.0);
         secondSet.setRpe(9.0);
 
-        Map<String, Object> openAiResponse = Map.of(
-            "choices", List.of(
-                Map.of(
-                    "message", Map.of(
-                        "content", """
-                            RECOMMENDATION: Keep progressing your pulling work.
-                            FOCUS_AREA: Back
-                            NEXT_EXERCISE: Pull-Up
-                            """
-                    )
-                )
-            )
-        );
-
         when(workoutService.getWorkoutsForUser("user-1")).thenReturn(List.of(activeWorkout, completedWorkout));
         when(setRepository.findByWorkoutId(1L)).thenReturn(List.of(firstSet, secondSet));
         when(exerciseRepository.findAllById(List.of(10L))).thenReturn(List.of(exercise));
-        when(restTemplate.postForObject(anyString(), any(), eq(Map.class))).thenReturn(openAiResponse);
+        when(openAIChatClient.isConfigured()).thenReturn(true);
+        when(openAIChatClient.complete(anyString())).thenReturn("""
+            RECOMMENDATION: Keep progressing your pulling work.
+            FOCUS_AREA: Back
+            NEXT_EXERCISE: Pull-Up
+            """);
 
         CoachRecommendationResponse response = aiCoachService.getAutoRecommendation(
             "user-1",

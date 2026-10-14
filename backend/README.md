@@ -54,6 +54,11 @@ Public: `GET /health`
 - With `calitrack.coach.async-enabled` on, finishing a workout publishes a `WorkoutLogged` event
   to the `workout-logged` topic: JSON, keyed by user ID, sent only after the transaction commits.
   If Kafka is unreachable the request still succeeds and the failure is logged.
+- The `coach-recommender` consumer reads those events, generates a recommendation from the user's
+  last 5 workouts and `coach_profiles` entry (defaults if none), and saves it to
+  `coach_recommendations`. Redelivered events are skipped before calling OpenAI.
+- Failures are retried 3 times with exponential backoff (1s, 2s, 4s), then sent to
+  `workout-logged.DLT`. Missing key or exhausted quota, and malformed messages, go straight to the DLT.
 
 ## Run locally
 
