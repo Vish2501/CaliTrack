@@ -12,6 +12,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.Map;
@@ -26,7 +27,9 @@ public class AICoachService {
     private final SetRepository setRepository;
     private final ExerciseRepository exerciseRepository;
 
-    private static final DateTimeFormatter WORKOUT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    // The coach only needs a rough date, and the server doesn't know the user's time zone here.
+    private static final DateTimeFormatter WORKOUT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            .withZone(ZoneOffset.UTC);
 
     public AICoachService(CoachModelClient coachModelClient,
             WorkoutService workoutService,
@@ -98,7 +101,7 @@ public class AICoachService {
                 .toList();
 
         return new CoachPromptInput.WorkoutSummary(
-                workout.getStartTime().format(WORKOUT_DATE_FORMATTER),
+                WORKOUT_DATE_FORMATTER.format(workout.getStartTime()),
                 exerciseSummaries);
     }
 

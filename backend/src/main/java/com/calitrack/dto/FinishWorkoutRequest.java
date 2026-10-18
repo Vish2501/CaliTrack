@@ -2,9 +2,9 @@ package com.calitrack.dto;
 
 import jakarta.validation.constraints.PastOrPresent;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record FinishWorkoutRequest(
     @PastOrPresent
-    LocalDateTime endedAt
+    Instant endedAt
 ) {}

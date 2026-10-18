@@ -10,7 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -90,8 +91,8 @@ class CoachApiIntegrationTest extends AbstractIntegrationTest {
     private Workout saveRecommendation(String userId, String text) {
         Workout workout = new Workout();
         workout.setUserId(userId);
-        workout.setStartTime(LocalDateTime.now().minusHours(1));
-        workout.setEndTime(LocalDateTime.now());
+        workout.setStartTime(Instant.now().minus(Duration.ofHours(1)));
+        workout.setEndTime(Instant.now());
         workout = workoutRepository.save(workout);
 
         CoachRecommendation recommendation = new CoachRecommendation();

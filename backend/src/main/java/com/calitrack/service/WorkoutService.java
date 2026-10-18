@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -41,7 +41,7 @@ public class WorkoutService {
     public Workout startWorkout(String userId) {
         Workout workout = new Workout();
         workout.setUserId(userId);
-        workout.setStartTime(LocalDateTime.now());
+        workout.setStartTime(Instant.now());
 
         return workoutRepository.save(workout);
     }
@@ -85,11 +85,11 @@ public class WorkoutService {
     // Transactional so the WorkoutLogged listener can wait for the commit (AFTER_COMMIT
     // listeners never fire outside a transaction).
     @Transactional
-    public Workout finishWorkout(Long workoutId, String userId, LocalDateTime endedAt) {
+    public Workout finishWorkout(Long workoutId, String userId, Instant endedAt) {
         Workout workout = workoutRepository.findByIdAndUserId(workoutId, userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workout not found"));
 
-        workout.setEndTime(endedAt != null ? endedAt : LocalDateTime.now());
+        workout.setEndTime(endedAt != null ? endedAt : Instant.now());
         Workout saved = workoutRepository.save(workout);
         eventPublisher.publishEvent(new WorkoutLoggedEvent(saved.getId(), userId, saved.getEndTime()));
         return saved;

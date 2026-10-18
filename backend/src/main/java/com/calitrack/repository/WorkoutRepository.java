@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public interface WorkoutRepository extends JpaRepository<Workout, Long> {
@@ -19,17 +19,20 @@ public interface WorkoutRepository extends JpaRepository<Workout, Long> {
 
         Optional<Workout> findFirstByUserIdAndEndTimeIsNotNullOrderByEndTimeDesc(String userId);
 
+        // Converting to the user's local time before truncating makes weeks run from Monday 00:00
+        // in their zone (Postgres weeks start on Monday).
         @Query(value = """
-                        SELECT CAST(date_trunc('week', w.start_time) AS date) AS weekStart,
+                        SELECT CAST(date_trunc('week', w.start_time AT TIME ZONE :timeZone) AS date) AS weekStart,
                                    COUNT(*) AS workoutCount
                             FROM workouts w
                             WHERE w.user_id = :userId
-                              AND w.start_time BETWEEN :start AND :end
+                              AND w.start_time >= :start AND w.start_time < :end
                             GROUP BY weekStart
                             ORDER BY weekStart
                         """, nativeQuery = true)
         List<WorkoutFrequencyView> findWorkoutFrequency(
                         @Param("userId") String userId,
-                        @Param("start") LocalDateTime start,
-                        @Param("end") LocalDateTime end);
+                        @Param("start") Instant start,
+                        @Param("end") Instant end,
+                        @Param("timeZone") String timeZone);
 }

@@ -53,7 +53,7 @@ class SetServiceTest {
         saved.setReps(5);
         saved.setWeight(135.0);
         saved.setRpe(8.0);
-        saved.setTimestamp(java.time.LocalDateTime.now());
+        saved.setTimestamp(java.time.Instant.now());
 
         when(workoutRepository.findByIdAndUserId(1L, "user-1")).thenReturn(Optional.of(workout));
         when(exerciseRepository.findByIdAndUserId(2L, "user-1")).thenReturn(Optional.of(exercise));

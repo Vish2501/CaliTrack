@@ -4,7 +4,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Positive;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record UpdateSetRequest(
     @Positive
@@ -17,5 +17,5 @@ public record UpdateSetRequest(
     @DecimalMax("10.0")
     Double rpe,
 
-    LocalDateTime timestamp
+    Instant timestamp
 ) {}

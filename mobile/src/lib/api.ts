@@ -174,10 +174,16 @@ export async function getWorkouts() {
   return (await res.json()) as WorkoutResponse[];
 }
 
+// The server groups workouts into weeks in this zone, e.g. "Europe/London".
+function deviceTimeZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
 export async function getWorkoutFrequency(start: string, end: string) {
+  const query = new URLSearchParams({ start, end, timeZone: deviceTimeZone() });
   const res = await fetchWithTiming(
     "get_workout_frequency",
-    `${API_V1}/analytics/workout-frequency?start=${start}&end=${end}`,
+    `${API_V1}/analytics/workout-frequency?${query}`,
     {
       headers: await authHeaders(),
     },

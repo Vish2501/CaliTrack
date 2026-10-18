@@ -3,7 +3,7 @@ package com.calitrack.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "workouts")
@@ -19,9 +19,9 @@ public class Workout {
     private String userId;
 
     @Column(nullable = false)
-    private LocalDateTime startTime;
+    private Instant startTime;
 
-    private LocalDateTime endTime;
+    private Instant endTime;
 
     private String notes;
 }

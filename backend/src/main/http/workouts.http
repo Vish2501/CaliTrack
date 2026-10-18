@@ -4,12 +4,11 @@ Content-Type: application/json
 
 {
   "userId": "test-user",
-  "startTime": "2026-01-27T10:00:00",
-  "notes": "Push day"
+    "notes": "Push day"
 }
 
 ### Get weekly volume
-GET http://localhost:8080/api/v1/analytics/weekly-volume?weekStart=2026-01-27
+GET http://localhost:8080/api/v1/analytics/weekly-volume?weekStart=2026-01-26&timeZone=Europe/London
 
 ### Get AI Coaching Recommendation (auto-fetch recent workouts)
 GET http://localhost:8080/api/v1/coach/recommend?numWorkouts=5&userGoals=strength&fitnessLevel=intermediate

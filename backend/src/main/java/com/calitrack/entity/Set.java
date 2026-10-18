@@ -3,7 +3,7 @@ package com.calitrack.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "sets")
@@ -26,5 +26,5 @@ public class Set {
     private Double rpe;
 
     @Column(nullable = false)
-    private LocalDateTime timestamp;
+    private Instant timestamp;
 }

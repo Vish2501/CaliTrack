@@ -1,13 +1,13 @@
 package com.calitrack.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record WorkoutDetailsResponse(
     Long id,
     String userId,
-    LocalDateTime startTime,
-    LocalDateTime endTime,
+    Instant startTime,
+    Instant endTime,
     String notes,
     List<SetResponse> sets
 ) {}

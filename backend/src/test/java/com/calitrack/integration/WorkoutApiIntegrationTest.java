@@ -56,6 +56,33 @@ class WorkoutApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void finishTimeWithAnOffsetIsReturnedAsTheSameMomentInUtc() throws Exception {
+        long workoutId = startWorkout();
+
+        mockMvc.perform(patch("/api/v1/workouts/{id}/finish", workoutId)
+                .with(jwt().jwt(j -> j.subject(TEST_USER)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"endedAt":"2026-06-01T01:30:00+01:00"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.endTime").value("2026-06-01T00:30:00Z"));
+    }
+
+    @Test
+    void finishTimeWithoutAnOffsetIsABadRequest() throws Exception {
+        long workoutId = startWorkout();
+
+        mockMvc.perform(patch("/api/v1/workouts/{id}/finish", workoutId)
+                .with(jwt().jwt(j -> j.subject(TEST_USER)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"endedAt":"2026-06-01T01:30:00"}
+                    """))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void getWorkoutDetailsReturnsNotFoundForOtherUser() throws Exception {
         MvcResult startResult = mockMvc.perform(post("/api/v1/workouts")
                 .with(jwt().jwt(j -> j.subject(TEST_USER))))
@@ -75,5 +102,13 @@ class WorkoutApiIntegrationTest extends AbstractIntegrationTest {
     void unauthenticatedRequestReturnsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/workouts"))
             .andExpect(status().isUnauthorized());
+    }
+
+    private long startWorkout() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/workouts")
+                .with(jwt().jwt(j -> j.subject(TEST_USER))))
+            .andExpect(status().isCreated())
+            .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
     }
 }
