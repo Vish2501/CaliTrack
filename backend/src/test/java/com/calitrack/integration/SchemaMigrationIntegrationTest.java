@@ -19,6 +19,7 @@ import javax.sql.DataSource;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,14 +50,40 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void migrationsApplyUpToLatestVersion() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("5");
     }
 
     @Test
-    void v4GivesExistingWorkoutsAnIdAnEndTimeAndOrderedSets() {
-        // A schema of its own, so the migrations can be stopped at V3 and data written the old way.
+    void duplicateExercisesFromBeforeV4AreMergedIntoTheOldest() {
+        // A schema of its own, so the migrations can be stopped at V3 and duplicates written.
         String schema = "before_v4";
         Flyway.configure().dataSource(dataSource).schemas(schema).target("3").load().migrate();
+
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("INSERT INTO " + schema + ".exercises (id, name, user_id) VALUES "
+            + "(1, 'Push-Up', 'u'), (2, 'push-up', 'u'), (3, 'Push-Up', 'someone-else')");
+        jdbc.update("INSERT INTO " + schema + ".workouts (id, user_id, start_time) VALUES (1, 'u', now())");
+        jdbc.update("INSERT INTO " + schema + ".sets (workout_id, exercise_id, reps, timestamp) VALUES "
+            + "(1, 1, 10, now()), (1, 2, 12, now())");
+
+        Flyway.configure().dataSource(dataSource).schemas(schema).target("4").load().migrate();
+
+        List<Long> exerciseIds = jdbc.queryForList(
+            "SELECT id FROM " + schema + ".exercises ORDER BY id", Long.class);
+        List<Long> setExerciseIds = jdbc.queryForList(
+            "SELECT exercise_id FROM " + schema + ".sets ORDER BY reps", Long.class);
+        assertThat(exerciseIds).containsExactly(1L, 3L);
+        assertThat(setExerciseIds).containsExactly(1L, 1L);
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO " + schema + ".exercises (name, user_id) VALUES ('PUSH-UP', 'u')"))
+            .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void v5GivesExistingWorkoutsAnIdAnEndTimeAndOrderedSets() {
+        // A schema of its own, so the migrations can be stopped at V4 and data written the old way.
+        String schema = "before_v5";
+        Flyway.configure().dataSource(dataSource).schemas(schema).target("4").load().migrate();
 
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         String started = "2026-06-01 09:00:00+00";
@@ -67,7 +94,7 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
         jdbc.update("INSERT INTO " + schema + ".sets (id, workout_id, exercise_id, reps, timestamp) VALUES "
             + "(10, 1, 1, 5, now()), (11, 1, 1, 6, now()), (12, 2, 1, 7, now())");
 
-        Flyway.configure().dataSource(dataSource).schemas(schema).target("4").load().migrate();
+        Flyway.configure().dataSource(dataSource).schemas(schema).target("5").load().migrate();
 
         // The unfinished workout ends when it started; the finished one keeps its end.
         assertThat(momentIn(schema, "workouts", "end_time", "id = 1")).isEqualTo(Instant.parse("2026-06-01T10:00:00Z"));
