@@ -1,0 +1,3 @@
+# Save a workout in one request when it is finished
+
+The active workout lives only on the phone (kept in AsyncStorage so it survives the app being closed) and the server hears nothing until the user finishes. On finish the phone sends the whole workout, with its start and end times and every set, in one request, and the server saves it in one transaction. We chose this over saving each set as it is ticked because it works without signal in the gym, cannot leave a half-saved workout, and removes the need to clean up workouts that were started but never finished. It is the same model Hevy uses. The cost is that a workout is not on the server, or on any other device, until it is finished.
