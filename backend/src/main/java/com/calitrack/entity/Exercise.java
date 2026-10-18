@@ -22,4 +22,8 @@ public class Exercise {
 
     @Column(nullable = false)
     private String userId;
+
+    // A deleted exercise is archived rather than removed, so its sets and history are kept.
+    @Column(nullable = false)
+    private boolean archived;
 }

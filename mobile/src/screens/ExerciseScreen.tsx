@@ -56,7 +56,7 @@ export default function ExercisesScreen() {
   const handleDelete = (item: ExerciseResponse) => {
     Alert.alert(
       "Delete Exercise",
-      `Remove "${item.name}" from your library?`,
+      `Remove "${item.name}" from your library? Your past sets are kept.`,
       [
         { text: "Cancel", style: "cancel" },
         {
