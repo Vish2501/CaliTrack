@@ -1,4 +1,4 @@
-import { ExerciseEntry } from "../types/workout";
+import { ExerciseEntry, Workout } from "../types/workout";
 import { supabase } from "./supabase";
 import { trackApiTiming, trackProductEvent } from "./telemetry";
 
@@ -32,7 +32,7 @@ export type WorkoutResponse = {
   id: number;
   userId: string;
   startTime: string;
-  endTime: string | null;
+  endTime: string;
   notes: string | null;
 };
 
@@ -44,7 +44,6 @@ export type SetResponse = {
   reps: number | null;
   weight: number | null;
   rpe: number | null;
-  timestamp: string;
 };
 
 export type WorkoutDetailsResponse = WorkoutResponse & {
@@ -126,19 +125,13 @@ async function fetchWithTiming(
   }
 }
 
-export async function commitWorkout(
-  workoutId: number,
-  entries: ExerciseEntry[],
-) {
-  // Only persist sets the user explicitly completed with valid numeric inputs.
-  const completedSets = entries.flatMap((exercise) =>
+// Saves the whole workout in one request, so it is either fully saved or not saved at all.
+// Only ticked sets are sent. Retrying with the same workout is safe: the server returns the
+// workout it already saved.
+export async function finishWorkout(workout: Workout, entries: ExerciseEntry[]) {
+  const sets = entries.flatMap((exercise) =>
     exercise.sets
-      .filter(
-        (set) =>
-          set.completed &&
-          set.reps.trim().length > 0 &&
-          set.weight.trim().length > 0,
-      )
+      .filter((set) => set.completed)
       .map((set) => ({
         exerciseId: Number(exercise.id),
         reps: Number(set.reps),
@@ -146,20 +139,24 @@ export async function commitWorkout(
       })),
   );
 
-  // Send sets sequentially so server-side ordering stays predictable.
-  let successfulSetLogs = 0;
-  for (const set of completedSets) {
-    await addWorkoutSet(workoutId, set);
-    successfulSetLogs += 1;
-  }
-  if (successfulSetLogs > 0) {
-    trackProductEvent("set_logged", successfulSetLogs);
+  const res = await fetchWithTiming("finish_workout", `${API_V1}/workouts`, {
+    method: "POST",
+    headers: await authHeaders(true),
+    body: JSON.stringify({
+      id: workout.id,
+      startedAt: workout.startedAt,
+      endedAt: new Date().toISOString(),
+      sets,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseApiError(res));
   }
 
-  await finishWorkout(workoutId);
+  trackProductEvent("set_logged", sets.length);
   trackProductEvent("workout_completed");
-
-  return completedSets.length;
+  return (await res.json()) as WorkoutDetailsResponse;
 }
 
 export async function getWorkouts() {
@@ -196,21 +193,6 @@ export async function getWorkoutFrequency(start: string, end: string) {
   return (await res.json()) as WorkoutFrequencyResponse[];
 }
 
-export async function startWorkout() {
-  const res = await fetchWithTiming("start_workout", `${API_V1}/workouts`, {
-    method: "POST",
-    headers: await authHeaders(),
-  });
-
-  if (!res.ok) {
-    throw new Error(await res.text());
-  }
-
-  const data = (await res.json()) as WorkoutResponse;
-  trackProductEvent("workout_started");
-  return data;
-}
-
 export async function getWorkoutDetails(workoutId: number) {
   const res = await fetchWithTiming(
     "get_workout_details",
@@ -225,50 +207,6 @@ export async function getWorkoutDetails(workoutId: number) {
   }
 
   return (await res.json()) as WorkoutDetailsResponse;
-}
-
-export async function addWorkoutSet(
-  workoutId: number,
-  payload: {
-    exerciseId: number;
-    reps: number;
-    weight: number;
-    rpe?: number | null;
-  },
-) {
-  const res = await fetchWithTiming(
-    "add_workout_set",
-    `${API_V1}/workouts/${workoutId}/sets`,
-    {
-      method: "POST",
-      headers: await authHeaders(true),
-      body: JSON.stringify(payload),
-    },
-  );
-
-  if (!res.ok) {
-    throw new Error(await res.text());
-  }
-
-  return (await res.json()) as SetResponse;
-}
-
-export async function finishWorkout(workoutId: number) {
-  const res = await fetchWithTiming(
-    "finish_workout",
-    `${API_V1}/workouts/${workoutId}/finish`,
-    {
-      method: "PATCH",
-      headers: await authHeaders(true),
-      body: JSON.stringify({}),
-    },
-  );
-
-  if (!res.ok) {
-    throw new Error(await res.text());
-  }
-
-  return (await res.json()) as WorkoutResponse;
 }
 
 export async function getExercises() {

@@ -5,12 +5,13 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { getWorkouts } from "../lib/api";
 import { WorkoutsStackParamList } from "../types/navigation";
-import { Workout } from "../types/workout";
+
+type HistoryItem = { id: number; name: string; date: string };
 
 export default function HistoryScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<WorkoutsStackParamList>>();
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [workouts, setWorkouts] = useState<HistoryItem[]>([]);
   const [loadingWorkouts, setLoadingWorkouts] = useState(false);
 
   useFocusEffect(
@@ -24,18 +25,16 @@ export default function HistoryScreen() {
           if (!active) return;
 
           setWorkouts(
-            data
-              .filter((workout) => workout.endTime !== null)
-              .map((workout) => ({
-                id: workout.id,
-                name: workout.notes ?? "Workout",
-                date: new Date(workout.startTime).toLocaleDateString("en-GB", {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                }),
-              })),
+            data.map((workout) => ({
+              id: workout.id,
+              name: workout.notes ?? "Workout",
+              date: new Date(workout.startTime).toLocaleDateString("en-GB", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              }),
+            })),
           );
         } finally {
           if (active) setLoadingWorkouts(false);

@@ -1,6 +1,7 @@
 package com.calitrack.kafka;
 
 import com.calitrack.support.AbstractIntegrationTest;
+import com.calitrack.support.FinishedWorkouts;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,19 +36,8 @@ class WorkoutLoggedBrokerDownIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void finishingAWorkoutStillSucceedsWhenKafkaIsUnreachable() throws Exception {
-        String startResponse = mockMvc.perform(post("/api/v1/workouts")
-                .with(jwt().jwt(j -> j.subject(TEST_USER))))
-            .andExpect(status().isCreated())
-            .andReturn().getResponse().getContentAsString();
-        long workoutId = objectMapper.readTree(startResponse).get("id").asLong();
-
         Instant start = Instant.now();
-        mockMvc.perform(patch("/api/v1/workouts/{id}/finish", workoutId)
-                .with(jwt().jwt(j -> j.subject(TEST_USER)))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.endTime").isNotEmpty());
+        FinishedWorkouts.finish(mockMvc, TEST_USER);
 
         // Bounded by max.block.ms (5s), not Kafka's 60s default.
         assertThat(Duration.between(start, Instant.now())).isLessThan(Duration.ofSeconds(10));

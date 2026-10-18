@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -109,6 +110,7 @@ class AnalyticsApiIntegrationTest extends AbstractIntegrationTest {
     private Workout saveWorkout(String userId, String startTime) {
         Workout workout = new Workout();
         workout.setUserId(userId);
+        workout.setClientId(UUID.randomUUID());
         workout.setStartTime(OffsetDateTime.parse(startTime).toInstant());
         workout.setEndTime(workout.getStartTime().plusSeconds(3600));
         return workoutRepository.saveAndFlush(workout);
@@ -127,7 +129,7 @@ class AnalyticsApiIntegrationTest extends AbstractIntegrationTest {
         set.setExerciseId(exercise.getId());
         set.setReps(reps);
         set.setWeight(weight);
-        set.setTimestamp(workout.getStartTime());
+        set.setPosition(0);
         setRepository.saveAndFlush(set);
     }
 }

@@ -2,6 +2,7 @@ package com.calitrack.kafka;
 
 import com.calitrack.repository.CoachRecommendationRepository;
 import com.calitrack.support.AbstractKafkaIntegrationTest;
+import com.calitrack.support.FinishedWorkouts;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
@@ -61,17 +62,7 @@ class KafkaTracingIntegrationTest extends AbstractKafkaIntegrationTest {
             NEXT_EXERCISE: Pull-Up
             """);
 
-        String startResponse = mockMvc.perform(post("/api/v1/workouts")
-                .with(jwt().jwt(j -> j.subject(TEST_USER))))
-            .andExpect(status().isCreated())
-            .andReturn().getResponse().getContentAsString();
-        long workoutId = objectMapper.readTree(startResponse).get("id").asLong();
-
-        mockMvc.perform(patch("/api/v1/workouts/{id}/finish", workoutId)
-                .with(jwt().jwt(j -> j.subject(TEST_USER)))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-            .andExpect(status().isOk());
+        long workoutId = FinishedWorkouts.finish(mockMvc, TEST_USER);
 
         await().atMost(Duration.ofSeconds(30)).until(() -> recommendationRepository.existsByWorkoutId(workoutId));
 
@@ -88,7 +79,7 @@ class KafkaTracingIntegrationTest extends AbstractKafkaIntegrationTest {
             .orElseThrow(() -> new AssertionError("No HTTP span in the producer's trace: " + spans.getFinishedSpanItems()));
 
         assertThat(consumer.getTraceId()).isEqualTo(producer.getTraceId());
-        assertThat(finishRequest.getName()).containsIgnoringCase("patch");
+        assertThat(finishRequest.getName()).containsIgnoringCase("post /api/v1/workouts");
     }
 
     private Optional<SpanData> kafkaSpan(SpanKind kind) {

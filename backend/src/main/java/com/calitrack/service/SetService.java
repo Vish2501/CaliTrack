@@ -1,11 +1,9 @@
 package com.calitrack.service;
 
-import com.calitrack.dto.CreateSetRequest;
 import com.calitrack.dto.SetResponse;
 import com.calitrack.dto.UpdateSetRequest;
 import com.calitrack.entity.Exercise;
 import com.calitrack.entity.Set;
-import com.calitrack.entity.Workout;
 import com.calitrack.repository.ExerciseRepository;
 import com.calitrack.repository.SetRepository;
 import com.calitrack.repository.WorkoutRepository;
@@ -13,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,30 +30,11 @@ public class SetService {
         this.exerciseRepository = exerciseRepository;
     }
 
-    public SetResponse addSet(Long workoutId, String userId, CreateSetRequest request) {
-        Workout workout = workoutRepository.findByIdAndUserId(workoutId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workout not found"));
-
-        Exercise exercise = exerciseRepository.findByIdAndUserId(request.exerciseId(), userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise not found"));
-
-        Set set = new Set();
-        set.setWorkoutId(workout.getId());
-        set.setExerciseId(exercise.getId());
-        set.setReps(request.reps());
-        set.setWeight(request.weight());
-        set.setRpe(request.rpe());
-        set.setTimestamp(request.timestamp() != null ? request.timestamp() : Instant.now());
-
-        Set saved = setRepository.save(set);
-        return toResponse(saved, exercise.getName());
-    }
-
     public List<SetResponse> getSets(Long workoutId, String userId) {
         workoutRepository.findByIdAndUserId(workoutId, userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workout not found"));
 
-        List<Set> sets = setRepository.findByWorkoutId(workoutId);
+        List<Set> sets = setRepository.findByWorkoutIdOrderByPosition(workoutId);
         Map<Long, String> exerciseNames = exerciseRepository.findAllById(
             sets.stream().map(Set::getExerciseId).distinct().toList()
         ).stream().collect(Collectors.toMap(Exercise::getId, Exercise::getName, (a, b) -> a));
@@ -76,7 +54,6 @@ public class SetService {
         if (request.reps() != null) set.setReps(request.reps());
         if (request.weight() != null) set.setWeight(request.weight());
         if (request.rpe() != null) set.setRpe(request.rpe());
-        if (request.timestamp() != null) set.setTimestamp(request.timestamp());
 
         Set saved = setRepository.save(set);
         String exerciseName = exerciseRepository.findById(saved.getExerciseId())
@@ -103,8 +80,7 @@ public class SetService {
             exerciseName,
             set.getReps(),
             set.getWeight(),
-            set.getRpe(),
-            set.getTimestamp()
+            set.getRpe()
         );
     }
 }

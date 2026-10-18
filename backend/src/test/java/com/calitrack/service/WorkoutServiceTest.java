@@ -1,5 +1,6 @@
 package com.calitrack.service;
 
+import com.calitrack.dto.FinishWorkoutRequest;
 import com.calitrack.dto.WorkoutDetailsResponse;
 import com.calitrack.entity.Exercise;
 import com.calitrack.entity.Set;
@@ -10,6 +11,7 @@ import com.calitrack.repository.SetRepository;
 import com.calitrack.repository.WorkoutRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,11 +22,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,21 +52,6 @@ class WorkoutServiceTest {
     private WorkoutService workoutService;
 
     @Test
-    void startWorkoutPersistsWorkoutForUser() {
-        when(workoutRepository.save(any(Workout.class))).thenAnswer(invocation -> {
-            Workout workout = invocation.getArgument(0);
-            workout.setId(1L);
-            return workout;
-        });
-
-        Workout result = workoutService.startWorkout("user-1");
-
-        assertThat(result.getUserId()).isEqualTo("user-1");
-        assertThat(result.getStartTime()).isNotNull();
-        verify(workoutRepository).save(any(Workout.class));
-    }
-
-    @Test
     void getWorkoutDetailsReturnsSetsWithExerciseNames() {
         Workout workout = new Workout();
         workout.setId(10L);
@@ -75,14 +65,14 @@ class WorkoutServiceTest {
         set.setReps(12);
         set.setWeight(0.0);
         set.setRpe(7.0);
-        set.setTimestamp(Instant.now());
+        set.setPosition(0);
 
         Exercise exercise = new Exercise();
         exercise.setId(20L);
         exercise.setName("Pull-Up");
 
         when(workoutRepository.findByIdAndUserId(10L, "user-1")).thenReturn(Optional.of(workout));
-        when(setRepository.findByWorkoutId(10L)).thenReturn(List.of(set));
+        when(setRepository.findByWorkoutIdOrderByPosition(10L)).thenReturn(List.of(set));
         when(exerciseRepository.findAllById(List.of(20L))).thenReturn(List.of(exercise));
 
         WorkoutDetailsResponse details = workoutService.getWorkoutDetails(10L, "user-1");
@@ -102,28 +92,61 @@ class WorkoutServiceTest {
     }
 
     @Test
-    void finishWorkoutSetsEndTimeAndPublishesWorkoutLogged() {
-        Workout workout = new Workout();
-        workout.setId(10L);
-        workout.setUserId("user-1");
-        workout.setStartTime(Instant.now().minus(Duration.ofHours(1)));
-        Instant endedAt = Instant.now();
+    void finishWorkoutSavesSetsInOrderAndPublishesWorkoutLogged() {
+        Instant endedAt = Instant.parse("2026-06-01T10:00:00Z");
+        when(exerciseRepository.findAllById(List.of(21L, 20L)))
+            .thenReturn(List.of(exercise(20L, "user-1"), exercise(21L, "user-1")));
+        when(workoutRepository.save(any(Workout.class))).thenAnswer(invocation -> {
+            Workout workout = invocation.getArgument(0);
+            workout.setId(10L);
+            return workout;
+        });
 
-        when(workoutRepository.findByIdAndUserId(10L, "user-1")).thenReturn(Optional.of(workout));
-        when(workoutRepository.save(workout)).thenReturn(workout);
+        workoutService.finishWorkout("user-1", request(endedAt.minus(Duration.ofHours(1)), endedAt,
+            new FinishWorkoutRequest.FinishedSet(21L, 5, 40.0),
+            new FinishWorkoutRequest.FinishedSet(20L, 8, 0.0)));
 
-        Workout result = workoutService.finishWorkout(10L, "user-1", endedAt);
-
-        assertThat(result.getEndTime()).isEqualTo(endedAt);
+        ArgumentCaptor<Set> sets = ArgumentCaptor.forClass(Set.class);
+        verify(setRepository, times(2)).save(sets.capture());
+        assertThat(sets.getAllValues())
+            .extracting(Set::getExerciseId, Set::getPosition)
+            .containsExactly(tuple(21L, 0), tuple(20L, 1));
         verify(eventPublisher).publishEvent(new WorkoutLoggedEvent(10L, "user-1", endedAt));
     }
 
     @Test
-    void finishWorkoutPublishesNothingWhenWorkoutNotFound() {
-        when(workoutRepository.findByIdAndUserId(99L, "user-1")).thenReturn(Optional.empty());
+    void finishWorkoutRejectsAnEndBeforeTheStartAndSavesNothing() {
+        Instant startedAt = Instant.parse("2026-06-01T10:00:00Z");
 
-        assertThatThrownBy(() -> workoutService.finishWorkout(99L, "user-1", null))
-            .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> workoutService.finishWorkout("user-1", request(startedAt, startedAt.minusSeconds(1),
+                new FinishWorkoutRequest.FinishedSet(20L, 8, 0.0))))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("endedAt must not be before startedAt");
+        verify(workoutRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void finishWorkoutRejectsAnotherUsersExerciseAndSavesNothing() {
+        Instant endedAt = Instant.parse("2026-06-01T10:00:00Z");
+        when(exerciseRepository.findAllById(List.of(20L))).thenReturn(List.of(exercise(20L, "someone-else")));
+
+        assertThatThrownBy(() -> workoutService.finishWorkout("user-1", request(endedAt.minus(Duration.ofHours(1)), endedAt,
+                new FinishWorkoutRequest.FinishedSet(20L, 8, 0.0))))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("Unknown exercise");
+        verify(workoutRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    private static FinishWorkoutRequest request(Instant startedAt, Instant endedAt, FinishWorkoutRequest.FinishedSet... sets) {
+        return new FinishWorkoutRequest(UUID.randomUUID(), startedAt, endedAt, null, List.of(sets));
+    }
+
+    private static Exercise exercise(Long id, String userId) {
+        Exercise exercise = new Exercise();
+        exercise.setId(id);
+        exercise.setUserId(userId);
+        return exercise;
     }
 }

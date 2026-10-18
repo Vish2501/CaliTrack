@@ -1,6 +1,5 @@
 package com.calitrack.controller;
 
-import com.calitrack.dto.CreateSetRequest;
 import com.calitrack.dto.SetResponse;
 import com.calitrack.dto.UpdateSetRequest;
 import com.calitrack.service.CurrentUserService;
@@ -23,16 +22,6 @@ public class SetController {
     public SetController(SetService setService, CurrentUserService currentUserService) {
         this.setService = setService;
         this.currentUserService = currentUserService;
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public SetResponse addSet(
-            @PathVariable Long workoutId,
-            @Valid @RequestBody CreateSetRequest request,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
-        return setService.addSet(workoutId, currentUserService.getUserId(jwt), request);
     }
 
     @GetMapping

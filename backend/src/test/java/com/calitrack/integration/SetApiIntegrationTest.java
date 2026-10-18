@@ -1,20 +1,22 @@
 package com.calitrack.integration;
 
 import com.calitrack.support.AbstractIntegrationTest;
+import com.calitrack.support.FinishedWorkouts;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Sets are added only by finishing a workout. These cover reading, correcting and removing them.
 class SetApiIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -23,60 +25,40 @@ class SetApiIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private long workoutId;
-    private long exerciseId;
-
-    @BeforeEach
-    void setUp() throws Exception {
-        MvcResult workoutResult = mockMvc.perform(post("/api/v1/workouts")
-                .with(jwt().jwt(j -> j.subject(TEST_USER))))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        workoutId = objectMapper.readTree(workoutResult.getResponse().getContentAsString())
-            .get("id")
-            .asLong();
-
-        MvcResult exerciseResult = mockMvc.perform(post("/api/v1/exercises")
-                .with(jwt().jwt(j -> j.subject(TEST_USER)))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {"name":"Push-Up","category":"Chest"}
-                    """))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        exerciseId = objectMapper.readTree(exerciseResult.getResponse().getContentAsString())
-            .get("id")
-            .asLong();
-    }
-
     @Test
-    void addAndListSets() throws Exception {
-        mockMvc.perform(post("/api/v1/workouts/{workoutId}/sets", workoutId)
+    void listCorrectAndDeleteASetOfAFinishedWorkout() throws Exception {
+        long workoutId = FinishedWorkouts.finish(mockMvc, TEST_USER);
+
+        String sets = mockMvc.perform(get("/api/v1/workouts/{workoutId}/sets", workoutId)
+                .with(jwt().jwt(j -> j.subject(TEST_USER))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].reps").value(8))
+            .andReturn().getResponse().getContentAsString();
+        long setId = objectMapper.readTree(sets).get(0).get("id").asLong();
+
+        mockMvc.perform(patch("/api/v1/workouts/{workoutId}/sets/{setId}", workoutId, setId)
                 .with(jwt().jwt(j -> j.subject(TEST_USER)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"exerciseId":%d,"reps":10,"weight":0,"rpe":7}
-                    """.formatted(exerciseId)))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.exerciseName").value("Push-Up"))
+                    {"reps":10}
+                    """))
+            .andExpect(status().isOk())
             .andExpect(jsonPath("$.reps").value(10));
+
+        mockMvc.perform(delete("/api/v1/workouts/{workoutId}/sets/{setId}", workoutId, setId)
+                .with(jwt().jwt(j -> j.subject(TEST_USER))))
+            .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/v1/workouts/{workoutId}/sets", workoutId)
                 .with(jwt().jwt(j -> j.subject(TEST_USER))))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].reps").value(10));
+            .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
-    void addSetReturnsNotFoundForUnknownWorkout() throws Exception {
-        mockMvc.perform(post("/api/v1/workouts/{workoutId}/sets", 9999L)
-                .with(jwt().jwt(j -> j.subject(TEST_USER)))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {"exerciseId":%d,"reps":8,"weight":0,"rpe":6}
-                    """.formatted(exerciseId)))
+    void listingSetsOfAnUnknownWorkoutIsNotFound() throws Exception {
+        mockMvc.perform(get("/api/v1/workouts/{workoutId}/sets", 9999L)
+                .with(jwt().jwt(j -> j.subject(TEST_USER))))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.message").value("Workout not found"));
     }

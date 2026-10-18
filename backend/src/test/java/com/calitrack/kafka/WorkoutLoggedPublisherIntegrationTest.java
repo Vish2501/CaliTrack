@@ -1,6 +1,7 @@
 package com.calitrack.kafka;
 
 import com.calitrack.support.AbstractKafkaIntegrationTest;
+import com.calitrack.support.FinishedWorkouts;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -36,17 +37,7 @@ class WorkoutLoggedPublisherIntegrationTest extends AbstractKafkaIntegrationTest
 
     @Test
     void finishingAWorkoutPublishesWorkoutLoggedKeyedByUser() throws Exception {
-        String startResponse = mockMvc.perform(post("/api/v1/workouts")
-                .with(jwt().jwt(j -> j.subject(TEST_USER))))
-            .andExpect(status().isCreated())
-            .andReturn().getResponse().getContentAsString();
-        long workoutId = objectMapper.readTree(startResponse).get("id").asLong();
-
-        mockMvc.perform(patch("/api/v1/workouts/{id}/finish", workoutId)
-                .with(jwt().jwt(j -> j.subject(TEST_USER)))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-            .andExpect(status().isOk());
+        long workoutId = FinishedWorkouts.finish(mockMvc, TEST_USER);
 
         ConsumerRecord<String, String> record = pollForWorkout(workoutId)
             .orElseThrow(() -> new AssertionError("No WorkoutLogged event for workout " + workoutId));

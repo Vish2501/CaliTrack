@@ -45,7 +45,7 @@ Tab order in app:
 
 Primary API areas used:
 
-- `workouts` (start, list, details, finish, set logging)
+- `workouts` (finish a whole workout in one request, list, details)
 - `exercises` (list/create, plus initial seed behavior)
 - `analytics/workout-frequency` (profile insights)
 - `coach` (latest recommendation, on-demand recommendation, coach profile)

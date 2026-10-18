@@ -86,7 +86,7 @@ public class AICoachService {
     }
 
     private CoachPromptInput.WorkoutSummary buildWorkoutSummary(Workout workout) {
-        List<Set> sets = setRepository.findByWorkoutId(workout.getId());
+        List<Set> sets = setRepository.findByWorkoutIdOrderByPosition(workout.getId());
         Map<Long, Exercise> exerciseMap = exerciseRepository.findAllById(
                 sets.stream().map(Set::getExerciseId).distinct().toList()).stream()
                 .collect(Collectors.toMap(Exercise::getId, exercise -> exercise, (first, second) -> first));

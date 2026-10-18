@@ -105,10 +105,10 @@ EXPO_PUBLIC_API_URL=http://<your-LAN-IP>:8080 npx expo start
 ```
 
 Finish a workout, open Coach from the Profile tab, and a recommendation appears a few seconds later. In Jaeger,
-the `PATCH /api/v1/workouts/{workoutId}/finish` trace shows the request, the Kafka send and the
+the `POST /api/v1/workouts` trace shows the request, the Kafka send and the
 consumer.
 
-**A terminal walkthrough** that needs no phone. It starts a workout, logs sets, finishes it, shows
+**A terminal walkthrough** that needs no phone. It finishes a workout with two sets in one request, shows
 the Kafka event and polls for the result:
 
 ```bash

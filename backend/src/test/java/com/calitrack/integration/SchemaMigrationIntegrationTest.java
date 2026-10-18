@@ -19,6 +19,7 @@ import javax.sql.DataSource;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -48,7 +49,36 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void migrationsApplyUpToLatestVersion() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
+    }
+
+    @Test
+    void v4GivesExistingWorkoutsAnIdAnEndTimeAndOrderedSets() {
+        // A schema of its own, so the migrations can be stopped at V3 and data written the old way.
+        String schema = "before_v4";
+        Flyway.configure().dataSource(dataSource).schemas(schema).target("3").load().migrate();
+
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        String started = "2026-06-01 09:00:00+00";
+        jdbc.update("INSERT INTO " + schema + ".workouts (id, user_id, start_time, end_time) VALUES "
+            + "(1, 'u', ?::timestamptz, ?::timestamptz), (2, 'u', ?::timestamptz, NULL)",
+            started, "2026-06-01 10:00:00+00", started);
+        jdbc.update("INSERT INTO " + schema + ".exercises (id, name, user_id) VALUES (1, 'Squat', 'u')");
+        jdbc.update("INSERT INTO " + schema + ".sets (id, workout_id, exercise_id, reps, timestamp) VALUES "
+            + "(10, 1, 1, 5, now()), (11, 1, 1, 6, now()), (12, 2, 1, 7, now())");
+
+        Flyway.configure().dataSource(dataSource).schemas(schema).target("4").load().migrate();
+
+        // The unfinished workout ends when it started; the finished one keeps its end.
+        assertThat(momentIn(schema, "workouts", "end_time", "id = 1")).isEqualTo(Instant.parse("2026-06-01T10:00:00Z"));
+        assertThat(momentIn(schema, "workouts", "end_time", "id = 2")).isEqualTo(Instant.parse("2026-06-01T09:00:00Z"));
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(DISTINCT client_id) FROM " + schema + ".workouts WHERE client_id IS NOT NULL", Long.class))
+            .isEqualTo(2L);
+        // Each workout's sets are numbered from 0 in the order they were saved.
+        assertThat(jdbc.queryForList(
+            "SELECT position FROM " + schema + ".sets ORDER BY id", Integer.class))
+            .containsExactly(0, 1, 0);
     }
 
     @Test
@@ -68,6 +98,7 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
         // A session zone far from UTC proves V3 doesn't read old values in the session's zone.
         Flyway.configure().dataSource(dataSource).schemas(schema)
             .initSql("SET TIME ZONE 'Pacific/Auckland'")
+            .target("3")
             .load().migrate();
 
         Instant utcNoonMoment = Instant.parse("2026-06-01T12:00:00Z");
@@ -123,14 +154,19 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
     private Workout saveWorkout(String userId) {
         Workout workout = new Workout();
         workout.setUserId(userId);
+        workout.setClientId(UUID.randomUUID());
         workout.setStartTime(Instant.now().minus(Duration.ofHours(1)));
         workout.setEndTime(Instant.now());
         return workoutRepository.saveAndFlush(workout);
     }
 
     private Instant momentIn(String schema, String table, String column) {
+        return momentIn(schema, table, column, "true");
+    }
+
+    private Instant momentIn(String schema, String table, String column, String where) {
         return new JdbcTemplate(dataSource)
-            .queryForObject("SELECT " + column + " FROM " + schema + "." + table, OffsetDateTime.class)
+            .queryForObject("SELECT " + column + " FROM " + schema + "." + table + " WHERE " + where, OffsetDateTime.class)
             .toInstant();
     }
 
