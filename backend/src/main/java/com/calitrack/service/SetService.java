@@ -1,5 +1,6 @@
 package com.calitrack.service;
 
+import com.calitrack.dto.PreviousSetResponse;
 import com.calitrack.dto.SetResponse;
 import com.calitrack.dto.UpdateSetRequest;
 import com.calitrack.entity.Exercise;
@@ -13,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +30,23 @@ public class SetService {
         this.setRepository = setRepository;
         this.workoutRepository = workoutRepository;
         this.exerciseRepository = exerciseRepository;
+    }
+
+    // The sets from the last time this user did this exercise, in order, so the phone can suggest
+    // values for today's sets. Empty when they have never done it.
+    public List<PreviousSetResponse> getPreviousSets(Long exerciseId, String userId) {
+        exerciseRepository.findByIdAndUserId(exerciseId, userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise not found"));
+
+        Optional<Long> latestWorkoutId = setRepository.findLatestWorkoutIdWithExercise(userId, exerciseId);
+        if (latestWorkoutId.isEmpty()) {
+            return List.of(); // never done this exercise
+        }
+
+        return setRepository.findByWorkoutIdAndExerciseIdOrderByPosition(latestWorkoutId.get(), exerciseId)
+            .stream()
+            .map(set -> new PreviousSetResponse(set.getReps(), set.getWeight()))
+            .toList();
     }
 
     public List<SetResponse> getSets(Long workoutId, String userId) {

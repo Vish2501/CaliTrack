@@ -1,9 +1,11 @@
 package com.calitrack.controller;
 
 import com.calitrack.dto.CreateExerciseRequest;
+import com.calitrack.dto.PreviousSetResponse;
 import com.calitrack.entity.Exercise;
 import com.calitrack.service.CurrentUserService;
 import com.calitrack.service.ExerciseService;
+import com.calitrack.service.SetService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,10 +19,13 @@ import java.util.List;
 public class ExerciseController {
 
     private final ExerciseService exerciseService;
+    private final SetService setService;
     private final CurrentUserService currentUserService;
 
-    public ExerciseController(ExerciseService exerciseService, CurrentUserService currentUserService) {
+    public ExerciseController(ExerciseService exerciseService, SetService setService,
+                              CurrentUserService currentUserService) {
         this.exerciseService = exerciseService;
+        this.setService = setService;
         this.currentUserService = currentUserService;
     }
 
@@ -44,5 +49,10 @@ public class ExerciseController {
     public void deleteExercise(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         String userId = currentUserService.getUserId(jwt);
         exerciseService.deleteExercise(id, userId);
+    }
+
+    @GetMapping("/{id}/previous-sets")
+    public List<PreviousSetResponse> getPreviousSets(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        return setService.getPreviousSets(id, currentUserService.getUserId(jwt));
     }
 }
