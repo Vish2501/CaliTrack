@@ -18,7 +18,6 @@ public interface SetRepository extends JpaRepository<Set, Long> {
 
   List<Set> findByWorkoutId(Long workoutId);
 Optional<Set> findByIdAndWorkoutId(Long id, Long workoutId);
-  void deleteByExerciseId(Long exerciseId);
   @Query(value = """
           SELECT s.exercise_id AS exerciseId,
              e.name AS exerciseName,

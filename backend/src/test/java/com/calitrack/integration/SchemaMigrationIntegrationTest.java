@@ -19,6 +19,7 @@ import javax.sql.DataSource;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -48,7 +49,33 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void migrationsApplyUpToLatestVersion() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
+    }
+
+    @Test
+    void duplicateExercisesFromBeforeV4AreMergedIntoTheOldest() {
+        // A schema of its own, so the migrations can be stopped at V3 and duplicates written.
+        String schema = "before_v4";
+        Flyway.configure().dataSource(dataSource).schemas(schema).target("3").load().migrate();
+
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("INSERT INTO " + schema + ".exercises (id, name, user_id) VALUES "
+            + "(1, 'Push-Up', 'u'), (2, 'push-up', 'u'), (3, 'Push-Up', 'someone-else')");
+        jdbc.update("INSERT INTO " + schema + ".workouts (id, user_id, start_time) VALUES (1, 'u', now())");
+        jdbc.update("INSERT INTO " + schema + ".sets (workout_id, exercise_id, reps, timestamp) VALUES "
+            + "(1, 1, 10, now()), (1, 2, 12, now())");
+
+        Flyway.configure().dataSource(dataSource).schemas(schema).load().migrate();
+
+        List<Long> exerciseIds = jdbc.queryForList(
+            "SELECT id FROM " + schema + ".exercises ORDER BY id", Long.class);
+        List<Long> setExerciseIds = jdbc.queryForList(
+            "SELECT exercise_id FROM " + schema + ".sets ORDER BY reps", Long.class);
+        assertThat(exerciseIds).containsExactly(1L, 3L);
+        assertThat(setExerciseIds).containsExactly(1L, 1L);
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO " + schema + ".exercises (name, user_id) VALUES ('PUSH-UP', 'u')"))
+            .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

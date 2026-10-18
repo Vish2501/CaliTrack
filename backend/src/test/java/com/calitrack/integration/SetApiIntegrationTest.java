@@ -9,6 +9,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.UUID;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -25,6 +27,7 @@ class SetApiIntegrationTest extends AbstractIntegrationTest {
 
     private long workoutId;
     private long exerciseId;
+    private String exerciseName;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -37,12 +40,14 @@ class SetApiIntegrationTest extends AbstractIntegrationTest {
             .get("id")
             .asLong();
 
+        // Names are unique for each user, and this runs before every test.
+        exerciseName = "Push-Up " + UUID.randomUUID();
         MvcResult exerciseResult = mockMvc.perform(post("/api/v1/exercises")
                 .with(jwt().jwt(j -> j.subject(TEST_USER)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"name":"Push-Up","category":"Chest"}
-                    """))
+                    {"name":"%s","category":"Chest"}
+                    """.formatted(exerciseName)))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -60,7 +65,7 @@ class SetApiIntegrationTest extends AbstractIntegrationTest {
                     {"exerciseId":%d,"reps":10,"weight":0,"rpe":7}
                     """.formatted(exerciseId)))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.exerciseName").value("Push-Up"))
+            .andExpect(jsonPath("$.exerciseName").value(exerciseName))
             .andExpect(jsonPath("$.reps").value(10));
 
         mockMvc.perform(get("/api/v1/workouts/{workoutId}/sets", workoutId)
