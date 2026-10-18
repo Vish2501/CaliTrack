@@ -1,4 +1,4 @@
-import { suggestSets } from "./suggestions";
+import { fillFromSuggestions, suggestSets } from "./suggestions";
 
 const empty = { reps: "", weight: "", completed: false };
 
@@ -80,6 +80,36 @@ describe("suggestSets", () => {
       { weight: "20", reps: "8" },
       { weight: "25", reps: "6" },
       { weight: "27", reps: "5" },
+    ]);
+  });
+});
+
+describe("fillFromSuggestions", () => {
+  it("logs what was typed, or else the suggestion", () => {
+    const lastSession = [{ weight: "20", reps: "8" }];
+    const weightOnly = { weight: "25", reps: "", completed: true };
+
+    expect(fillFromSuggestions([weightOnly], lastSession)).toEqual([
+      { weight: "25", reps: "8", completed: true },
+    ]);
+  });
+
+  it("doesn't carry down values filled in from a suggestion", () => {
+    const pyramid = [
+      { weight: "20", reps: "8" },
+      { weight: "22", reps: "6" },
+    ];
+    // Set 1 was ticked without typing, so ticking filled in last session's 20 x 8.
+    const filledByTick = {
+      weight: "20",
+      reps: "8",
+      completed: true,
+      fromSuggestion: true,
+    };
+
+    expect(suggestSets([filledByTick, empty], pyramid)).toEqual([
+      { weight: "20", reps: "8" },
+      { weight: "22", reps: "6" },
     ]);
   });
 });

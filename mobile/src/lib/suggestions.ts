@@ -10,8 +10,9 @@ function suggestField(
   i: number,
   field: Field,
 ): string {
-  // 1. The value typed in the nearest set above.
+  // 1. The value typed in the nearest set above. Values filled in from a suggestion don't count.
   for (let above = i - 1; above >= 0; above--) {
+    if (entered[above].fromSuggestion) continue;
     const value = entered[above][field];
     if (value.trim() !== "") return value;
   }
@@ -33,5 +34,18 @@ export function suggestSets(
   return entered.map((_, i) => ({
     weight: suggestField(entered, lastSession, i, "weight"),
     reps: suggestField(entered, lastSession, i, "reps"),
+  }));
+}
+
+// Each set with its empty fields filled from its suggestion: the values ticking a set logs.
+export function fillFromSuggestions(
+  entered: SetEntry[],
+  lastSession: Suggestion[],
+): SetEntry[] {
+  const suggestions = suggestSets(entered, lastSession);
+  return entered.map((set, i) => ({
+    ...set,
+    weight: set.weight.trim() !== "" ? set.weight : suggestions[i].weight,
+    reps: set.reps.trim() !== "" ? set.reps : suggestions[i].reps,
   }));
 }

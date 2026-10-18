@@ -18,8 +18,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { getWorkoutDetails } from "../lib/api";
 import { getWeightUnitPreference, WeightUnit } from "../lib/preferences";
+import { fillFromSuggestions, suggestSets } from "../lib/suggestions";
 import { WorkoutsStackParamList } from "../types/navigation";
-import { Exercise, ExerciseEntry, Workout } from "../types/workout";
+import { Exercise, ExerciseEntry, SetEntry, Workout } from "../types/workout";
 
 type Props = {
   workout?: Workout | null;
@@ -166,7 +167,10 @@ export default function WorkoutDetailScreen({
           ? {
               ...entry,
               sets: entry.sets.map((set, index) =>
-                index === setIndex ? { ...set, [field]: value } : set,
+                // Once edited, the set's values are the user's own.
+                index === setIndex
+                  ? { ...set, [field]: value, fromSuggestion: false }
+                  : set,
               ),
             }
           : entry,
@@ -175,18 +179,41 @@ export default function WorkoutDetailScreen({
   };
 
   const toggleSetCompleted = (exerciseId: string, setIndex: number) => {
+    const entry = displayedEntries.find(
+      (e) => String(e.id) === String(exerciseId),
+    );
+    const set = entry?.sets[setIndex];
+    if (!entry || !set) return;
+
+    let next: SetEntry;
+    if (set.completed) {
+      // Unticking a set whose values came from a suggestion goes back to showing the suggestion.
+      next = set.fromSuggestion
+        ? { reps: "", weight: "", completed: false }
+        : { ...set, completed: false };
+    } else {
+      // Ticking fills any empty field from its suggestion, so the set holds real, editable values.
+      const filled = fillFromSuggestions(entry.sets, entry.lastSession ?? [])[
+        setIndex
+      ];
+      if (filled.weight.trim() === "" || filled.reps.trim() === "") {
+        Alert.alert("Missing values", "Enter a weight and reps for this set.");
+        return;
+      }
+      // Only a set ticked without typing anything counts as filled from a suggestion; if the user
+      // typed part of it, it is theirs.
+      const untouched = set.weight.trim() === "" && set.reps.trim() === "";
+      next = { ...filled, completed: true, fromSuggestion: untouched };
+    }
+
     updateEntries(
-      displayedEntries.map((entry) =>
-        String(entry.id) === String(exerciseId)
+      displayedEntries.map((e) =>
+        e === entry
           ? {
-              ...entry,
-              sets: entry.sets.map((set, index) =>
-                index === setIndex
-                  ? { ...set, completed: !set.completed }
-                  : set,
-              ),
+              ...e,
+              sets: e.sets.map((s, index) => (index === setIndex ? next : s)),
             }
-          : entry,
+          : e,
       ),
     );
   };
@@ -285,91 +312,97 @@ export default function WorkoutDetailScreen({
         </View>
       ) : (
         <ScrollView className="flex-1" contentContainerClassName="gap-4 pb-4">
-          {displayedEntries.map((exercise) => (
-            <View
-              key={String(exercise.id)}
-              className="bg-[#01161e] rounded-xl p-4"
-            >
-              <View className="flex-row items-center justify-between mb-1">
-                <Text className="text-base font-bold text-[#eff6e0]">
-                  {exercise.name}
+          {displayedEntries.map((exercise) => {
+            // Faint values from the sets above or last session. A finished workout has none.
+            const suggestions = isReadOnly
+              ? exercise.sets.map(() => ({ weight: "", reps: "" }))
+              : suggestSets(exercise.sets, exercise.lastSession ?? []);
+            return (
+              <View
+                key={String(exercise.id)}
+                className="bg-[#01161e] rounded-xl p-4"
+              >
+                <View className="flex-row items-center justify-between mb-1">
+                  <Text className="text-base font-bold text-[#eff6e0]">
+                    {exercise.name}
+                  </Text>
+                  {!isReadOnly && (
+                    <Pressable
+                      onPress={() => removeExercise(exercise.id)}
+                      accessibilityLabel={`Remove ${exercise.name}`}
+                      className="p-1"
+                    >
+                      <Ionicons name="close-circle" size={20} color="#aec3b0" />
+                    </Pressable>
+                  )}
+                </View>
+                <Text className="text-xs text-[#aec3b0] mb-3">
+                  {exercise.category}
                 </Text>
+
+                {exercise.sets.map((set, index) => (
+                  <View
+                    key={`${exercise.id}-set-${index}`}
+                    className="flex-row items-center gap-2 mb-2"
+                  >
+                    <Text className="text-[#aec3b0] w-6">{index + 1}</Text>
+                    <TextInput
+                      placeholder={suggestions[index].weight || weightUnit}
+                      placeholderTextColor="#aec3b0"
+                      value={set.weight}
+                      keyboardType="numeric"
+                      editable={!isReadOnly}
+                      onChangeText={(value) =>
+                        updateSetField(exercise.id, index, "weight", value)
+                      }
+                      className="flex-1 bg-[#124559] text-[#eff6e0] px-3 py-2 rounded-lg"
+                    />
+                    <TextInput
+                      placeholder={suggestions[index].reps || "reps"}
+                      placeholderTextColor="#aec3b0"
+                      value={set.reps}
+                      editable={!isReadOnly}
+                      keyboardType="numeric"
+                      onChangeText={(value) =>
+                        updateSetField(exercise.id, index, "reps", value)
+                      }
+                      className="flex-1 bg-[#124559] text-[#eff6e0] px-3 py-2 rounded-lg"
+                    />
+                    {!isReadOnly && (
+                      <>
+                        <Pressable
+                          className={`px-3 py-2 rounded-lg ${set.completed ? "bg-[#eff6e0]" : "bg-[#598392]"}`}
+                          onPress={() => toggleSetCompleted(exercise.id, index)}
+                        >
+                          <Ionicons
+                            name="checkmark"
+                            size={16}
+                            color={set.completed ? "#01161e" : "#eff6e0"}
+                          />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => removeLocalSet(exercise.id, index)}
+                          accessibilityLabel="Remove set"
+                          className="px-1 py-2"
+                        >
+                          <Ionicons name="close" size={16} color="#aec3b0" />
+                        </Pressable>
+                      </>
+                    )}
+                  </View>
+                ))}
+
                 {!isReadOnly && (
                   <Pressable
-                    onPress={() => removeExercise(exercise.id)}
-                    accessibilityLabel={`Remove ${exercise.name}`}
-                    className="p-1"
+                    className="mt-2 bg-[#598392] py-2 rounded-lg items-center"
+                    onPress={() => addLocalSet(exercise.id)}
                   >
-                    <Ionicons name="close-circle" size={20} color="#aec3b0" />
+                    <Text className="text-[#01161e] font-bold">Add Set</Text>
                   </Pressable>
                 )}
               </View>
-              <Text className="text-xs text-[#aec3b0] mb-3">
-                {exercise.category}
-              </Text>
-
-              {exercise.sets.map((set, index) => (
-                <View
-                  key={`${exercise.id}-set-${index}`}
-                  className="flex-row items-center gap-2 mb-2"
-                >
-                  <Text className="text-[#aec3b0] w-6">{index + 1}</Text>
-                  <TextInput
-                    placeholder={weightUnit}
-                    placeholderTextColor="#aec3b0"
-                    value={set.weight}
-                    keyboardType="numeric"
-                    editable={!isReadOnly}
-                    onChangeText={(value) =>
-                      updateSetField(exercise.id, index, "weight", value)
-                    }
-                    className="flex-1 bg-[#124559] text-[#eff6e0] px-3 py-2 rounded-lg"
-                  />
-                  <TextInput
-                    placeholder="reps"
-                    placeholderTextColor="#aec3b0"
-                    value={set.reps}
-                    editable={!isReadOnly}
-                    keyboardType="numeric"
-                    onChangeText={(value) =>
-                      updateSetField(exercise.id, index, "reps", value)
-                    }
-                    className="flex-1 bg-[#124559] text-[#eff6e0] px-3 py-2 rounded-lg"
-                  />
-                  {!isReadOnly && (
-                    <>
-                      <Pressable
-                        className={`px-3 py-2 rounded-lg ${set.completed ? "bg-[#eff6e0]" : "bg-[#598392]"}`}
-                        onPress={() => toggleSetCompleted(exercise.id, index)}
-                      >
-                        <Ionicons
-                          name="checkmark"
-                          size={16}
-                          color={set.completed ? "#01161e" : "#eff6e0"}
-                        />
-                      </Pressable>
-                      <Pressable
-                        onPress={() => removeLocalSet(exercise.id, index)}
-                        accessibilityLabel="Remove set"
-                        className="px-1 py-2"
-                      >
-                        <Ionicons name="close" size={16} color="#aec3b0" />
-                      </Pressable>
-                    </>
-                  )}
-                </View>
-              ))}
-
-              {!isReadOnly && (
-                <Pressable
-                  className="mt-2 bg-[#598392] py-2 rounded-lg items-center"
-                  onPress={() => addLocalSet(exercise.id)}
-                >
-                  <Text className="text-[#01161e] font-bold">Add Set</Text>
-                </Pressable>
-              )}
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
 
