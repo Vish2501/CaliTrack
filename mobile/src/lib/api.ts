@@ -1,4 +1,5 @@
 import { ExerciseEntry, Workout } from "../types/workout";
+import { Suggestion } from "./suggestions";
 import { supabase } from "./supabase";
 import { trackApiTiming, trackProductEvent } from "./telemetry";
 
@@ -207,6 +208,28 @@ export async function getWorkoutDetails(workoutId: number) {
   }
 
   return (await res.json()) as WorkoutDetailsResponse;
+}
+
+// This exercise's sets from the last time the user did it, in order. Empty if never done.
+export async function getPreviousSets(exerciseId: number): Promise<Suggestion[]> {
+  const res = await fetchWithTiming(
+    "get_previous_sets",
+    `${API_V1}/exercises/${exerciseId}/previous-sets`,
+    { headers: await authHeaders() },
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseApiError(res));
+  }
+
+  const sets = (await res.json()) as {
+    reps: number | null;
+    weight: number | null;
+  }[];
+  return sets.map((set) => ({
+    weight: set.weight != null ? String(set.weight) : "",
+    reps: set.reps != null ? String(set.reps) : "",
+  }));
 }
 
 export async function getExercises() {

@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import ActiveWorkoutModal from "../components/ActiveWorkoutModal";
 import { ActiveWorkoutUI, Exercise, Workout } from "../types/workout";
 import { randomUUID } from "expo-crypto";
+import { getPreviousSets } from "../lib/api";
 import { trackProductEvent } from "../lib/telemetry";
 
 const TEMPLATES = [
@@ -79,9 +80,26 @@ export default function WorkoutsScreen() {
     setActiveWorkoutUI((prev) => ({ ...prev, view }));
   }, []);
 
+  // Loads the exercise's sets from last time, for suggestions. With no signal there are simply
+  // no suggestions.
+  const loadLastSession = useCallback(async (exerciseId: string) => {
+    try {
+      const lastSession = await getPreviousSets(Number(exerciseId));
+      setActiveWorkoutUI((prev) => ({
+        ...prev,
+        entries: prev.entries.map((entry) =>
+          entry.id === exerciseId ? { ...entry, lastSession } : entry,
+        ),
+      }));
+    } catch {
+      // Suggestions are a convenience; logging works without them.
+    }
+  }, []);
+
   const selectExercise = useCallback((exercise: Exercise) => {
     // Normalize IDs as strings because the local workout UI stores entry IDs as strings.
     const normalizedExercise = { ...exercise, id: String(exercise.id) };
+    void loadLastSession(normalizedExercise.id);
     setActiveWorkoutUI((prev) => ({
       ...prev,
       selectedExercise: normalizedExercise,
@@ -101,7 +119,7 @@ export default function WorkoutsScreen() {
           ],
       view: "details",
     }));
-  }, []);
+  }, [loadLastSession]);
 
   const changeEntries = useCallback((entries: ActiveWorkoutUI["entries"]) => {
     setActiveWorkoutUI((prev) => ({ ...prev, entries }));

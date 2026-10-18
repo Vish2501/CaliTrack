@@ -128,8 +128,8 @@ cd backend && mvn test
 - **Integration tests** run against real PostgreSQL and Kafka in Testcontainers. They cover the API,
   the migrations, the Kafka producer and consumer (retries, dead-letter topic, duplicate delivery,
   malformed messages, the broker being down) and trace propagation. Docker must be running.
-- **GitHub Actions** runs the backend tests, a Docker image build and the mobile typecheck. Render
-  deploys `main` only after CI passes.
+- **GitHub Actions** runs the backend tests, a Docker image build, and the mobile typecheck and Jest
+  tests. Render deploys `main` only after CI passes.
 
 ## Configuration
 
@@ -147,7 +147,8 @@ cd backend && mvn test
 - **Cold starts:** Render's free instance sleeps when idle, so the first request after a quiet spell
   can take a minute or more.
 - **Kafka is off in production:** running it there would need a hosted Kafka broker.
-- **Mobile tests:** the mobile app has no tests yet; CI typechecks it.
+- **Mobile tests:** only the set-suggestion rules have unit tests (Jest); screens have no
+  component tests yet.
 - **Placeholder templates:** the workout templates on the Workouts tab are placeholders, not saved
   routines.
 
