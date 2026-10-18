@@ -1,0 +1,522 @@
+<!doctype html>
+<!--
+  PROTOTYPE, throw away. Not part of the app.
+  Question: what should CaliTrack's overall look be (colours, contrast, button hierarchy, type)?
+  Plan: three visual directions, each shown on the Workouts tab, the workout logger and Profile,
+  switchable via ?variant=A|B|C and the floating bar (or the arrow keys).
+  Assumption: standalone HTML, because Expo web isn't set up and the real screens need login and the backend.
+  Styling is Tailwind classes so the winner maps straight onto NativeWind. Data is fake and in memory.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CaliTrack visual directions (prototype)</title>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+  .phone { width: 360px; height: 740px; border-radius: 44px; overflow: hidden; position: relative; flex: none;
+           box-shadow: 0 0 0 10px #1c1c1e, 0 20px 50px rgba(0,0,0,.35); }
+  .phone-scroll { position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  .serif { font-family: "New York", Georgia, "Times New Roman", serif; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .num { font-family: ui-rounded, "SF Pro Rounded", -apple-system, sans-serif; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body class="bg-neutral-200 min-h-screen">
+<div class="px-4 pt-6 pb-28">
+  <div class="max-w-[1200px] mx-auto">
+    <p class="text-xs uppercase tracking-widest text-neutral-500">Prototype · throw away</p>
+    <h1 id="title" class="text-2xl font-semibold text-neutral-900 mt-1"></h1>
+    <p id="blurb" class="text-sm text-neutral-600 mt-1 max-w-2xl"></p>
+    <div id="swatches" class="flex flex-wrap gap-2 mt-3"></div>
+  </div>
+  <div id="stage" class="flex flex-wrap justify-center gap-12 mt-8"></div>
+</div>
+
+<div class="fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-neutral-900 text-white shadow-2xl px-2 py-2 text-sm z-50">
+  <button id="prev" class="w-9 h-9 rounded-full hover:bg-white/15" aria-label="Previous variant">←</button>
+  <span id="label" class="px-3 font-medium whitespace-nowrap"></span>
+  <button id="next" class="w-9 h-9 rounded-full hover:bg-white/15" aria-label="Next variant">→</button>
+</div>
+
+<script>
+// ---------- fake data ----------
+const LOG = [
+  { name: "Pull-Up", type: "Bodyweight", sets: [
+    { prev: "12", reps: "12", done: true }, { prev: "10", reps: "11", done: true }, { prev: "9", reps: "", done: false } ] },
+  { name: "Weighted Dip", type: "Weighted bodyweight", sets: [
+    { prev: "+10 kg × 8", kg: "12.5", reps: "8", done: true }, { prev: "+10 kg × 7", kg: "12.5", reps: "", done: false } ] },
+  { name: "Squat", type: "Weight & reps", sets: [
+    { prev: "80 kg × 5", kg: "82.5", reps: "5", done: false } ] },
+  { name: "Plank", type: "Duration", sets: [
+    { prev: "1:15", time: "1:30", done: false } ] },
+];
+const WEEKS = [{ l: "22 Sep", n: 2 }, { l: "29 Sep", n: 3 }, { l: "6 Oct", n: 0 }, { l: "13 Oct", n: 4 }];
+const PRS = [
+  { ex: "Pull-Up", what: "Most reps", val: "15 reps" },
+  { ex: "Weighted Dip", what: "Heaviest added", val: "+20 kg" },
+  { ex: "Squat", what: "Heaviest", val: "100 kg" },
+  { ex: "Plank", what: "Longest hold", val: "2:05" },
+];
+const RECENT = [
+  { name: "Pull day", when: "Thu 16 Oct", dur: "52 min", sets: 14 },
+  { name: "Legs", when: "Tue 14 Oct", dur: "61 min", sets: 18 },
+  { name: "Push day", when: "Sun 12 Oct", dur: "47 min", sets: 15 },
+];
+const fields = (t) => t === "Bodyweight" ? ["REPS"] : t === "Duration" ? ["TIME"]
+  : t === "Weighted bodyweight" ? ["+KG", "REPS"] : ["KG", "REPS"];
+const vals = (s, t) => t === "Bodyweight" ? [s.reps] : t === "Duration" ? [s.time]
+  : [s.kg, s.reps];
+const max = Math.max(...WEEKS.map(w => w.n));
+
+// ---------- Variant A: Gym Dark ----------
+const A = {
+  name: "Gym Dark",
+  blurb: "Near-black with one electric-blue accent, like Hevy. Flat lists, no cards. Done sets turn green. Blue is used only for the one main action on each screen.",
+  swatches: [["#0d0f12","bg"],["#171a1f","surface"],["#f2f4f7","text"],["#8a93a0","muted"],["#3b82f6","accent"],["#22c55e","done"]],
+  workouts: () => `
+    <div class="bg-[#0d0f12] text-[#f2f4f7] min-h-full px-5 pt-14 pb-28">
+      <h2 class="text-[28px] font-bold">Workout</h2>
+      <button class="mt-5 w-full rounded-xl bg-[#3b82f6] py-3.5 font-semibold">+ Start empty workout</button>
+      <p class="mt-8 text-xs font-semibold tracking-wider text-[#8a93a0]">RECENT</p>
+      ${RECENT.map(r => `
+        <div class="py-3.5 border-b border-white/5 flex justify-between items-center">
+          <div><p class="font-semibold">${r.name}</p><p class="text-sm text-[#8a93a0]">${r.when} · ${r.dur}</p></div>
+          <p class="text-sm text-[#8a93a0] tnum">${r.sets} sets</p>
+        </div>`).join("")}
+    </div>
+    ${A.tabbar(1)}`,
+  logger: () => `
+    <div class="bg-[#0d0f12] text-[#f2f4f7] min-h-full pb-10">
+      <div class="sticky top-0 bg-[#0d0f12]/95 backdrop-blur px-5 pt-14 pb-3 flex items-center justify-between border-b border-white/5 z-10">
+        <div><p class="font-semibold">Evening workout</p><p class="text-sm text-[#8a93a0] tnum">38:12 · 5 sets</p></div>
+        <button class="rounded-lg bg-[#3b82f6] px-4 py-2 text-sm font-semibold">Finish</button>
+      </div>
+      ${LOG.map(ex => {
+        const f = fields(ex.type);
+        const cols = `grid-template-columns: 28px 1fr ${f.map(() => "64px").join(" ")} 36px`;
+        return `
+        <div class="px-5 pt-5">
+          <p class="font-semibold text-[#3b82f6]">${ex.name}</p>
+          <p class="text-xs text-[#8a93a0]">${ex.type}</p>
+          <div class="grid gap-2 mt-3 text-[11px] font-semibold tracking-wider text-[#8a93a0]" style="${cols}">
+            <span>SET</span><span>PREVIOUS</span>${f.map(x => `<span class="text-center">${x}</span>`).join("")}<span></span>
+          </div>
+          ${ex.sets.map((s, i) => `
+            <div class="grid gap-2 items-center mt-1 rounded-md px-0 py-1 ${s.done ? "bg-[#22c55e]/15" : ""}" style="${cols}">
+              <span class="text-center font-semibold tnum">${i + 1}</span>
+              <span class="text-sm text-[#8a93a0] tnum">${s.prev}</span>
+              ${vals(s, ex.type).map(v => `<span class="rounded-md ${s.done ? "" : "bg-[#171a1f]"} py-1.5 text-center font-semibold tnum ${v ? "" : "text-[#8a93a0]/50"}">${v || "–"}</span>`).join("")}
+              <span class="w-8 h-8 rounded-md grid place-items-center ${s.done ? "bg-[#22c55e] text-black" : "bg-[#171a1f] text-[#8a93a0]"}">✓</span>
+            </div>`).join("")}
+          <button class="mt-2 w-full rounded-md bg-[#171a1f] py-2 text-sm font-semibold text-[#c9ced6]">+ Add set</button>
+        </div>`; }).join("")}
+      <div class="px-5 mt-6"><button class="w-full rounded-xl bg-[#171a1f] py-3 font-semibold text-[#3b82f6]">+ Add exercise</button></div>
+      <div class="px-5 mt-3"><button class="w-full py-3 text-sm font-semibold text-[#ef4444]">Discard workout</button></div>
+    </div>`,
+  profile: () => `
+    <div class="bg-[#0d0f12] text-[#f2f4f7] min-h-full px-5 pt-14 pb-28">
+      <div class="flex items-center justify-between"><h2 class="text-[28px] font-bold">Profile</h2><span class="text-[#8a93a0]">⚙︎</span></div>
+      <div class="grid grid-cols-3 mt-5 text-center">
+        ${[["Workouts","42"],["This week","4"],["Streak","3 wks"]].map(([k,v]) => `<div><p class="text-xl font-bold tnum">${v}</p><p class="text-xs text-[#8a93a0]">${k}</p></div>`).join("")}
+      </div>
+      <p class="mt-8 text-xs font-semibold tracking-wider text-[#8a93a0]">WORKOUTS PER WEEK</p>
+      <div class="mt-3 h-36 flex items-end gap-4 border-b border-white/10 pb-1">
+        ${WEEKS.map(w => `<div class="flex-1 flex flex-col items-center justify-end h-full">
+          <span class="text-xs tnum mb-1 ${w.n ? "" : "text-[#8a93a0]"}">${w.n}</span>
+          ${w.n ? `<div class="w-full rounded-t bg-[#3b82f6]" style="height:${w.n / max * 100}px"></div>` : ""}</div>`).join("")}
+      </div>
+      <div class="flex gap-4 mt-1 text-[11px] text-[#8a93a0]">${WEEKS.map(w => `<span class="flex-1 text-center">${w.l}</span>`).join("")}</div>
+      <p class="mt-8 text-xs font-semibold tracking-wider text-[#8a93a0]">PERSONAL RECORDS</p>
+      ${PRS.map(p => `<div class="py-3 border-b border-white/5 flex justify-between"><div><p class="font-semibold">${p.ex}</p><p class="text-xs text-[#8a93a0]">${p.what}</p></div><p class="font-bold tnum">${p.val}</p></div>`).join("")}
+      <button class="mt-6 w-full py-3 text-sm text-[#8a93a0]">Log out</button>
+    </div>
+    ${A.tabbar(0)}`,
+  tabbar: (active) => `
+    <div class="absolute bottom-0 inset-x-0 bg-[#0d0f12] border-t border-white/5 grid grid-cols-4 pt-2 pb-6 text-[11px] text-center">
+      ${["Profile","Workout","History","Exercises"].map((t, i) => `<span class="${i === active ? "text-[#3b82f6]" : "text-[#8a93a0]"}"><span class="block text-lg leading-6">${["◉","＋","◷","☰"][i]}</span>${t}</span>`).join("")}
+    </div>`,
+};
+
+// ---------- Variant B: Paper ----------
+const B = {
+  name: "Paper",
+  blurb: "Light, warm and typographic. Hairlines instead of cards, serif headlines, big numbers. Black is the main action and one red-orange accent marks progress. Feels like a training journal.",
+  swatches: [["#f7f5f0","bg"],["#ffffff","surface"],["#111111","text"],["#6b6b6b","muted"],["#e2ded5","line"],["#e4572e","accent"]],
+  workouts: () => `
+    <div class="bg-[#f7f5f0] text-[#111] min-h-full px-6 pt-14 pb-28">
+      <p class="text-sm text-[#6b6b6b]">Saturday 18 October</p>
+      <h2 class="serif text-[34px] leading-tight mt-1">Ready to train?</h2>
+      <div class="flex justify-between mt-6">
+        ${["M","T","W","T","F","S","S"].map((d, i) => `<div class="text-center"><p class="text-xs text-[#6b6b6b]">${d}</p>
+          <div class="mt-1 w-8 h-8 rounded-full grid place-items-center text-sm ${[1,3].includes(i) ? "bg-[#e4572e] text-white" : i === 5 ? "border border-[#111]" : "text-[#6b6b6b]"}">${12 + i}</div></div>`).join("")}
+      </div>
+      <button class="mt-8 w-full rounded-full bg-[#111] text-white py-4 font-medium">Start workout</button>
+      <p class="serif text-xl mt-10">Recent</p>
+      ${RECENT.map(r => `
+        <div class="py-4 border-b border-[#e2ded5] flex justify-between items-baseline">
+          <div><p class="font-medium">${r.name}</p><p class="text-sm text-[#6b6b6b]">${r.when}</p></div>
+          <p class="text-sm text-[#6b6b6b] tnum">${r.dur} · ${r.sets} sets</p>
+        </div>`).join("")}
+    </div>
+    ${B.tabbar(1)}`,
+  logger: () => `
+    <div class="bg-[#f7f5f0] text-[#111] min-h-full pb-28">
+      <div class="px-6 pt-14">
+        <div class="flex justify-between items-center text-sm"><span class="text-[#6b6b6b]">⌄ Minimise</span><span class="tnum text-[#6b6b6b]">38:12</span></div>
+        <h2 class="serif text-[30px] mt-3">Evening workout</h2>
+        <div class="mt-2 h-1 rounded-full bg-[#e2ded5]"><div class="h-1 rounded-full bg-[#e4572e]" style="width:45%"></div></div>
+        <p class="text-xs text-[#6b6b6b] mt-1">5 of 11 sets done</p>
+      </div>
+      ${LOG.map(ex => {
+        const f = fields(ex.type);
+        return `
+        <div class="px-6 pt-7">
+          <div class="flex justify-between items-baseline"><p class="serif text-xl">${ex.name}</p><p class="text-xs text-[#6b6b6b]">${ex.type}</p></div>
+          <table class="w-full mt-2 text-sm">
+            <tr class="text-[11px] uppercase tracking-wider text-[#6b6b6b]"><td class="py-1 w-8">Set</td><td>Last time</td>${f.map(x => `<td class="text-right">${x.toLowerCase()}</td>`).join("")}<td class="w-10"></td></tr>
+            ${ex.sets.map((s, i) => `
+              <tr class="border-t border-[#e2ded5] ${s.done ? "" : ""}">
+                <td class="py-2.5 tnum">${i + 1}</td>
+                <td class="text-[#6b6b6b] tnum">${s.prev}</td>
+                ${vals(s, ex.type).map(v => `<td class="text-right text-lg tnum ${v ? "" : "text-[#c9c4b8]"}">${v || "0"}</td>`).join("")}
+                <td class="text-right"><span class="inline-grid place-items-center w-7 h-7 rounded-full ${s.done ? "bg-[#e4572e] text-white" : "border border-[#c9c4b8] text-transparent"}">✓</span></td>
+              </tr>`).join("")}
+          </table>
+          <button class="mt-1 text-sm text-[#6b6b6b] underline underline-offset-4">Add set</button>
+        </div>`; }).join("")}
+      <div class="px-6 mt-8"><button class="w-full rounded-full border border-[#111] py-3 font-medium">Add exercise</button></div>
+    </div>
+    <div class="absolute bottom-0 inset-x-0 bg-[#f7f5f0]/95 backdrop-blur border-t border-[#e2ded5] px-6 pt-3 pb-7 flex gap-3">
+      <button class="px-5 py-3.5 rounded-full text-sm text-[#6b6b6b]">Discard</button>
+      <button class="flex-1 rounded-full bg-[#111] text-white py-3.5 font-medium">Finish workout</button>
+    </div>`,
+  profile: () => `
+    <div class="bg-[#f7f5f0] text-[#111] min-h-full px-6 pt-14 pb-28">
+      <h2 class="serif text-[34px]">Your progress</h2>
+      <div class="mt-6 flex gap-8">
+        <div><p class="serif text-5xl tnum">42</p><p class="text-sm text-[#6b6b6b]">workouts</p></div>
+        <div><p class="serif text-5xl tnum">4</p><p class="text-sm text-[#6b6b6b]">this week</p></div>
+      </div>
+      <p class="text-sm text-[#6b6b6b] mt-8">Workouts per week</p>
+      <svg viewBox="0 0 300 90" class="w-full mt-2">
+        <polyline fill="none" stroke="#e4572e" stroke-width="2.5" points="${WEEKS.map((w, i) => `${20 + i * 86},${80 - w.n / max * 65}`).join(" ")}" />
+        ${WEEKS.map((w, i) => `<circle cx="${20 + i * 86}" cy="${80 - w.n / max * 65}" r="4" fill="${w.n ? "#e4572e" : "#f7f5f0"}" stroke="#e4572e" stroke-width="2"/>`).join("")}
+      </svg>
+      <div class="flex justify-between text-[11px] text-[#6b6b6b] px-1">${WEEKS.map(w => `<span>${w.l}</span>`).join("")}</div>
+      <p class="serif text-xl mt-10">Personal records</p>
+      ${PRS.map(p => `<div class="py-3.5 border-b border-[#e2ded5] flex justify-between items-baseline"><div><p>${p.ex}</p><p class="text-xs text-[#6b6b6b]">${p.what}</p></div><p class="serif text-2xl tnum">${p.val}</p></div>`).join("")}
+      <p class="mt-8 text-sm text-[#6b6b6b]">Settings · Log out</p>
+    </div>
+    ${B.tabbar(0)}`,
+  tabbar: (active) => `
+    <div class="absolute bottom-0 inset-x-0 bg-[#f7f5f0] border-t border-[#e2ded5] grid grid-cols-4 pt-3 pb-7 text-xs text-center">
+      ${["Progress","Train","History","Exercises"].map((t, i) => `<span class="${i === active ? "text-[#111] font-semibold" : "text-[#6b6b6b]"}">${t}${i === active ? `<span class="block mx-auto mt-1 w-1 h-1 rounded-full bg-[#e4572e]"></span>` : ""}</span>`).join("")}
+    </div>`,
+};
+
+// ---------- Variant C: Teal, evolved ----------
+const C = {
+  name: "Teal, evolved",
+  blurb: "Keeps your teal and cream brand but fixes the contrast. A deeper base, raised teal cards, a coral accent kept for main actions, and sage for done sets. Chunky tiles, with Finish as a floating button.",
+  swatches: [["#0b2e3b","bg"],["#124559","card"],["#eff6e0","text"],["#aec3b0","sage / done"],["#8fb3bf","muted"],["#ff8a5b","accent"]],
+  workouts: () => `
+    <div class="bg-[#0b2e3b] text-[#eff6e0] min-h-full px-5 pt-14 pb-28">
+      <h2 class="text-[28px] font-extrabold">Hey Vish 👋</h2>
+      <div class="mt-5 rounded-3xl bg-[#ff8a5b] text-[#0b2e3b] p-5">
+        <p class="text-sm font-semibold opacity-80">Nothing logged today</p>
+        <p class="text-2xl font-extrabold mt-1">Start a workout</p>
+        <button class="mt-4 rounded-full bg-[#0b2e3b] text-[#eff6e0] px-5 py-2.5 text-sm font-bold">Start →</button>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <div class="rounded-2xl bg-[#124559] p-4"><p class="text-3xl font-extrabold tnum">4</p><p class="text-sm text-[#8fb3bf]">this week</p></div>
+        <div class="rounded-2xl bg-[#124559] p-4"><p class="text-3xl font-extrabold tnum">3</p><p class="text-sm text-[#8fb3bf]">week streak</p></div>
+      </div>
+      <p class="mt-7 font-bold">Recent</p>
+      ${RECENT.map(r => `
+        <div class="mt-2 rounded-2xl bg-[#124559] px-4 py-3 flex justify-between items-center">
+          <div><p class="font-bold">${r.name}</p><p class="text-sm text-[#8fb3bf]">${r.when} · ${r.dur}</p></div>
+          <span class="rounded-full bg-[#0b2e3b] px-3 py-1 text-xs tnum">${r.sets} sets</span>
+        </div>`).join("")}
+    </div>
+    ${C.tabbar(1)}`,
+  logger: () => `
+    <div class="bg-[#0b2e3b] text-[#eff6e0] min-h-full px-4 pb-32">
+      <div class="pt-14 pb-2 flex items-center justify-between">
+        <span class="w-10 h-10 rounded-full bg-[#124559] grid place-items-center">⌄</span>
+        <div class="text-center"><p class="font-bold">Evening workout</p><p class="text-xs text-[#8fb3bf] tnum">38:12</p></div>
+        <span class="w-10 h-10 rounded-full bg-[#124559] grid place-items-center text-[#8fb3bf]">⋯</span>
+      </div>
+      ${LOG.map(ex => {
+        const f = fields(ex.type);
+        return `
+        <div class="mt-3 rounded-3xl bg-[#124559] p-4">
+          <div class="flex justify-between items-center"><p class="font-extrabold">${ex.name}</p><span class="rounded-full bg-[#0b2e3b] px-2.5 py-1 text-[11px] text-[#8fb3bf]">${ex.type}</span></div>
+          <div class="flex gap-2 mt-3 px-1 text-[11px] font-bold text-[#8fb3bf]"><span class="w-6">SET</span><span class="flex-1">PREV</span>${f.map(x => `<span class="w-16 text-center">${x}</span>`).join("")}<span class="w-10"></span></div>
+          ${ex.sets.map((s, i) => `
+            <div class="flex gap-2 items-center mt-1.5 rounded-2xl px-1 py-1 ${s.done ? "bg-[#aec3b0] text-[#0b2e3b]" : ""}">
+              <span class="w-6 text-center font-bold tnum">${i + 1}</span>
+              <span class="flex-1 text-sm tnum ${s.done ? "opacity-70" : "text-[#8fb3bf]"}">${s.prev}</span>
+              ${vals(s, ex.type).map(v => `<span class="w-16 rounded-xl ${s.done ? "" : "bg-[#0b2e3b]"} py-2 text-center font-bold tnum ${v ? "" : "text-[#8fb3bf]/50"}">${v || "–"}</span>`).join("")}
+              <span class="w-10 h-9 rounded-xl grid place-items-center font-bold ${s.done ? "bg-[#0b2e3b] text-[#aec3b0]" : "border-2 border-[#8fb3bf]/40 text-transparent"}">✓</span>
+            </div>`).join("")}
+          <button class="mt-2 w-full rounded-2xl border-2 border-dashed border-[#8fb3bf]/40 py-2 text-sm font-bold text-[#8fb3bf]">+ Set</button>
+        </div>`; }).join("")}
+      <button class="mt-3 w-full rounded-3xl bg-[#124559] py-4 font-bold text-[#ff8a5b]">+ Add exercise</button>
+    </div>
+    <button class="absolute bottom-7 left-1/2 -translate-x-1/2 rounded-full bg-[#ff8a5b] text-[#0b2e3b] px-8 py-4 font-extrabold shadow-xl">Finish workout</button>`,
+  profile: () => `
+    <div class="bg-[#0b2e3b] text-[#eff6e0] min-h-full px-5 pt-14 pb-28">
+      <div class="flex items-center gap-3"><span class="w-12 h-12 rounded-full bg-[#ff8a5b] text-[#0b2e3b] grid place-items-center font-extrabold">V</span>
+        <div><p class="font-extrabold text-lg">Vish</p><p class="text-sm text-[#8fb3bf]">Training since March</p></div></div>
+      <div class="mt-5 rounded-3xl bg-[#eff6e0] text-[#0b2e3b] p-4">
+        <p class="font-bold">Workouts per week</p>
+        <div class="mt-3 h-28 flex items-end gap-3">
+          ${WEEKS.map(w => `<div class="flex-1 flex flex-col items-center justify-end h-full">
+            <span class="text-xs font-bold tnum mb-1">${w.n}</span>
+            ${w.n ? `<div class="w-full rounded-xl bg-[#124559]" style="height:${w.n / max * 80}px"></div>` : `<div class="w-full border-t-2 border-dashed border-[#124559]/30"></div>`}</div>`).join("")}
+        </div>
+        <div class="flex gap-3 mt-1 text-[11px] opacity-70">${WEEKS.map(w => `<span class="flex-1 text-center">${w.l}</span>`).join("")}</div>
+      </div>
+      <p class="mt-6 font-bold">Personal records</p>
+      <div class="grid grid-cols-2 gap-3 mt-2">
+        ${PRS.map(p => `<div class="rounded-2xl bg-[#124559] p-4"><p class="text-xl font-extrabold tnum">${p.val}</p><p class="text-sm mt-1">${p.ex}</p><p class="text-xs text-[#8fb3bf]">${p.what}</p></div>`).join("")}
+      </div>
+      <button class="mt-6 w-full rounded-2xl bg-[#124559] py-3 text-sm font-bold text-[#8fb3bf]">Log out</button>
+    </div>
+    ${C.tabbar(0)}`,
+  tabbar: (active) => `
+    <div class="absolute bottom-4 inset-x-4 rounded-3xl bg-[#124559] shadow-xl grid grid-cols-4 py-3 text-[11px] text-center">
+      ${["Profile","Train","History","Exercises"].map((t, i) => `<span class="${i === active ? "text-[#ff8a5b] font-bold" : "text-[#8fb3bf]"}"><span class="block text-lg leading-6">${["◉","＋","◷","☰"][i]}</span>${t}</span>`).join("")}
+    </div>`,
+};
+
+// ---------- Variant D: Glass ----------
+// CSS approximation of iOS 26 Liquid Glass (blur + highlight). The real thing is native:
+// expo-glass-effect's GlassView, and React Navigation's native bottom tabs.
+const MUSCLE = { "Pull-Up": "#38bdf8", "Weighted Dip": "#fb7185", "Squat": "#a3e635", "Plank": "#fbbf24",
+  "Pull day": "#38bdf8", "Legs": "#a3e635", "Push day": "#fb7185" };
+const glass = "bg-white/10 backdrop-blur-xl backdrop-saturate-150 border border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_8px_30px_rgba(0,0,0,.35)]";
+// Logger rows for D. `focus` marks the cell the number pad is editing; `pr` a set that beat the user's best; `swiped` shows the delete action.
+const D_LOG = [
+  { name: "Pull-Up", type: "Bodyweight", sets: [
+    { prev: "12", vals: ["12"], done: true }, { prev: "10", vals: ["11"], done: true }, { prev: "9", vals: ["10"], done: false, focus: 0 } ] },
+  { name: "Weighted Dip", type: "Weighted bodyweight", sets: [
+    { prev: "+10 × 8", vals: ["12.5", "8"], done: true, pr: true }, { prev: "+10 × 7", vals: ["12.5", ""], done: false } ] },
+  { name: "Squat", type: "Weight & reps", sets: [
+    { prev: "80 × 5", vals: ["82.5", "5"], done: false }, { prev: "80 × 5", vals: ["", ""], done: false, swiped: true } ] },
+  { name: "Plank", type: "Duration", sets: [ { prev: "1:15", vals: ["1:30"], done: false } ] },
+];
+const D_GROUP = { Back: "#38bdf8", Push: "#fb7185", Legs: "#a3e635", Core: "#fbbf24" };
+const D_ROUTINES = [
+  { name: "Upper A · Pull-up focus", muscles: ["Back", "Push"], n: 6, min: 55, last: "Thu" },
+  { name: "Lower · Minimal support", muscles: ["Legs", "Core"], n: 5, min: 50, last: "Tue" },
+  { name: "Upper B · Dip & push focus", muscles: ["Push", "Back"], n: 6, min: 55, last: "Sun" },
+];
+const D = {
+  name: "Glass",
+  blurb: "Our own take, not Hevy's. Content stays solid and readable; Liquid Glass only on the floating controls (tab bar, active-workout accessory, toolbar, keyboard bar). Colour means muscle group; a filled check means done. Three tabs like Hevy: Home (your feed, with the coach's suggestion as a card), Workout (routines), Profile (progress and history). Logging uses the iOS keypad with a glass ± bar.",
+  swatches: [["#07090f","bg"],["#141823","content"],["#f5f7fb","text"],["#94a3b8","muted"],["#38bdf8","back"],["#fb7185","push"],["#a3e635","legs / finish"],["#fbbf24","core / PR"]],
+  backdrop: `<div class="absolute inset-0 bg-[#07090f]"></div>
+    <div class="absolute -top-20 -left-16 w-72 h-72 rounded-full bg-[#38bdf8]/30 blur-3xl"></div>
+    <div class="absolute top-64 -right-20 w-72 h-72 rounded-full bg-[#fb7185]/25 blur-3xl"></div>
+    <div class="absolute bottom-10 left-0 w-64 h-64 rounded-full bg-[#a3e635]/15 blur-3xl"></div>`,
+  home: () => `
+    <div class="relative text-[#f5f7fb] min-h-full">${D.backdrop}
+      <div class="relative px-5 pt-14 pb-48">
+        <p class="text-sm text-[#94a3b8]">Saturday 18 October</p>
+        <h2 class="text-[32px] font-bold tracking-tight">Home</h2>
+        <div class="mt-4 rounded-3xl bg-gradient-to-br from-[#1b2333] to-[#141823] border border-white/10 p-4">
+          <p class="text-xs font-semibold tracking-wider text-[#a3e635]">COACH SUGGESTS</p>
+          <p class="mt-1.5 font-semibold leading-snug">Upper B next. Your dips stalled at 8 reps, so try +12.5 kg for 3 × 6.</p>
+          <div class="mt-3 flex gap-2"><span class="rounded-full bg-[#f5f7fb] text-[#07090f] px-3.5 py-1.5 text-sm font-semibold">Start Upper B</span><span class="rounded-full bg-white/10 px-3.5 py-1.5 text-sm">Why?</span></div>
+        </div>
+        ${[{ name: "Upper A · Pull-up focus", when: "Thursday", dur: "52 min", vol: "3,120 kg", sets: 14, pr: "Pull-Up · 15 reps", ex: ["Pull-Up", "Weighted Dip", "Face Pull"] },
+           { name: "Lower · Minimal support", when: "Tuesday", dur: "61 min", vol: "6,480 kg", sets: 18, pr: null, ex: ["Squat", "Walking Lunge", "Plank"] }].map(w => `
+          <div class="mt-3 rounded-3xl bg-[#141823] p-4">
+            <div class="flex items-baseline justify-between"><p class="font-semibold">${w.name}</p><p class="text-xs text-[#94a3b8]">${w.when}</p></div>
+            <div class="mt-3 grid grid-cols-3 text-sm">
+              ${[["Time", w.dur], ["Volume", w.vol], ["Sets", w.sets]].map(([k, v]) => `<div><p class="text-[11px] text-[#94a3b8]">${k}</p><p class="font-semibold num">${v}</p></div>`).join("")}
+            </div>
+            ${w.pr ? `<p class="mt-3 text-sm"><span class="rounded-full bg-[#fbbf24] text-[#07090f] text-[10px] font-bold px-1.5 py-0.5 mr-1.5">PR</span>${w.pr}</p>` : ""}
+            <p class="mt-3 text-sm text-[#94a3b8]">${w.ex.join(" · ")}</p>
+          </div>`).join("")}
+      </div>
+    </div>
+    ${D.tabbar(0)}`,
+  workouts: () => `
+    <div class="relative text-[#f5f7fb] min-h-full">${D.backdrop}
+      <div class="relative px-5 pt-14 pb-48">
+        <h2 class="text-[32px] font-bold tracking-tight">Workout</h2>
+        <button class="mt-3 w-full rounded-2xl bg-white/5 border border-white/10 py-3.5 font-semibold">+ Start empty workout</button>
+        <div class="mt-7 flex items-center justify-between"><p class="text-lg font-semibold">Routines</p><span class="rounded-full bg-white/10 px-3 py-1 text-sm">+ New</span></div>
+        <p class="mt-3 text-sm text-[#94a3b8]">▾ Calisthenics Base · Phase 1</p>
+        ${D_ROUTINES.map(r => `
+          <div class="mt-2 rounded-2xl bg-[#141823] px-4 py-3 flex items-center gap-3">
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold truncate">${r.name}</p>
+              <div class="mt-1.5 flex items-center gap-1.5">${r.muscles.map(m => `<span class="rounded-full px-2 py-0.5 text-[11px] font-semibold text-[#07090f]" style="background:${D_GROUP[m]}">${m}</span>`).join("")}</div>
+              <p class="mt-1.5 text-xs text-[#94a3b8] num">${r.n} exercises · ~${r.min} min · last ${r.last}</p>
+            </div>
+            <span class="w-11 h-11 rounded-full bg-[#f5f7fb] text-[#07090f] grid place-items-center text-sm">▶</span>
+          </div>`).join("")}
+        <p class="mt-5 text-sm text-[#94a3b8]">▸ Deload week (2)</p>
+      </div>
+    </div>
+    ${D.accessory()}${D.tabbar(1)}`,
+  firstRun: () => `
+    <div class="relative text-[#f5f7fb] min-h-full">${D.backdrop}
+      <div class="relative px-5 pt-14 pb-36">
+        <p class="text-sm text-[#94a3b8]">Saturday 18 October</p>
+        <h2 class="text-[32px] font-bold tracking-tight">Welcome, Vish</h2>
+        <p class="mt-2 text-[#94a3b8]">Log your first workout and CaliTrack starts tracking your PRs and progress.</p>
+        <button class="mt-6 w-full rounded-2xl bg-[#f5f7fb] text-[#07090f] py-4 font-semibold">Start your first workout</button>
+        <p class="mt-8 text-sm font-semibold">How it works</p>
+        ${[["#38bdf8","Build a routine","Or start empty. 22 calisthenics and gym moves are ready to go."],
+           ["#a3e635","Tick each set","Rest timer starts itself, PRs show up live."],
+           ["#fbbf24","Get coached","After a few workouts the AI coach suggests what's next."]].map(([c, t, d], i) => `
+          <div class="mt-2 rounded-2xl bg-[#141823] p-4 flex gap-3">
+            <span class="w-7 h-7 rounded-full grid place-items-center text-sm font-bold text-[#07090f] num" style="background:${c}">${i + 1}</span>
+            <div><p class="font-semibold">${t}</p><p class="text-sm text-[#94a3b8]">${d}</p></div>
+          </div>`).join("")}
+      </div>
+    </div>
+    ${D.tabbar(0)}`,
+  logger: () => `
+    <div class="relative text-[#f5f7fb] min-h-full">${D.backdrop}
+      <div class="relative px-4 pt-28 pb-[330px]">
+        <p class="text-sm text-[#94a3b8] num">38:12 · 5 of 10 sets</p>
+        <h2 class="text-[28px] font-bold tracking-tight">Evening workout</h2>
+        ${D_LOG.map(ex => {
+          const c = MUSCLE[ex.name], f = fields(ex.type);
+          const cols = `grid-template-columns: 22px 1fr ${f.map(() => "58px").join(" ")} 44px`;
+          return `
+          <div class="mt-4 rounded-3xl bg-[#141823] p-3.5 overflow-hidden">
+            <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${c}"></span><p class="font-semibold">${ex.name}</p><p class="ml-auto text-xs text-[#94a3b8]">${ex.type}</p></div>
+            <div class="grid gap-1.5 mt-3 px-1 text-[10px] font-semibold tracking-wider text-[#94a3b8]" style="${cols}">
+              <span>SET</span><span>PREVIOUS</span>${f.map(x => `<span class="text-center">${x}</span>`).join("")}<span></span>
+            </div>
+            ${ex.sets.map((s, i) => {
+              const row = `
+                <div class="grid gap-1.5 items-center px-1 py-1 rounded-xl relative" style="${cols};${s.done ? `background:${c}1f` : ""}">
+                  <span class="text-center font-semibold num">${i + 1}</span>
+                  <span class="text-sm text-[#94a3b8] num flex items-center gap-1.5">${s.prev}${s.pr ? `<span class="rounded-full bg-[#fbbf24] text-[#07090f] text-[10px] font-bold px-1.5 py-0.5">PR</span>` : ""}</span>
+                  ${s.vals.map((v, j) => `<span class="h-10 rounded-lg grid place-items-center font-semibold num text-[17px]
+                      ${s.focus === j ? "bg-white/10 ring-2 ring-[#f5f7fb]" : s.done ? "" : "bg-white/5"} ${v ? "" : "text-white/25"}">${v || "–"}</span>`).join("")}
+                  <span class="w-11 h-11 rounded-xl grid place-items-center text-lg font-bold ${s.done ? "text-[#07090f]" : "bg-white/5 text-white/30"}" style="${s.done ? `background:${c}` : ""}">✓</span>
+                </div>`;
+              return s.swiped
+                ? `<div class="relative mt-0.5 rounded-xl bg-[#ef4444]"><span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold">Delete</span>
+                     <div class="bg-[#141823] rounded-xl -translate-x-20">${row}</div></div>`
+                : `<div class="mt-0.5">${row}</div>`;
+            }).join("")}
+            <button class="mt-2 w-full h-10 rounded-xl bg-white/5 text-sm font-semibold text-[#cbd5e1]">+ Add set</button>
+          </div>`; }).join("")}
+        <button class="mt-4 w-full rounded-3xl border border-dashed border-white/20 py-3.5 text-sm font-semibold text-[#94a3b8]">+ Add exercise</button>
+      </div>
+    </div>
+    <div data-fixed class="absolute top-12 inset-x-4 flex justify-between items-center z-10">
+      <span class="w-11 h-11 rounded-full ${glass} grid place-items-center text-white">⌄</span>
+      <span class="rounded-full ${glass} pl-3 pr-1.5 py-1.5 text-sm text-white flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-[#a3e635]"></span><span class="num font-semibold">Rest 1:24</span>
+        <span class="rounded-full bg-white/15 px-2 py-0.5 text-xs">−15</span><span class="rounded-full bg-white/15 px-2 py-0.5 text-xs">+15</span></span>
+      <span class="rounded-full bg-[#a3e635] text-[#07090f] px-4 py-2.5 text-sm font-bold shadow-[inset_0_1px_0_rgba(255,255,255,.6),0_8px_24px_rgba(163,230,53,.35)]">Finish</span>
+    </div>
+    ${D.keypad()}`,
+  keypad: () => `
+    <div data-fixed class="absolute bottom-0 inset-x-0 z-20 text-white">
+      <div class="mx-2 mb-2 rounded-full ${glass} px-2 py-1.5 flex items-center gap-2 text-sm">
+        <span class="pl-2 text-xs text-white/70">Set 3 · reps · last 9</span>
+        <span class="ml-auto rounded-full bg-white/15 w-11 h-9 grid place-items-center font-semibold">−1</span>
+        <span class="rounded-full bg-white/15 w-11 h-9 grid place-items-center font-semibold">+1</span>
+        <span class="rounded-full bg-[#f5f7fb] text-[#07090f] px-4 h-9 grid place-items-center font-semibold">Done</span>
+      </div>
+      <div class="bg-[#2c2c2e] px-1.5 pt-1.5 pb-7 grid grid-cols-3 gap-1.5">
+        ${[["1",""],["2","ABC"],["3","DEF"],["4","GHI"],["5","JKL"],["6","MNO"],["7","PQRS"],["8","TUV"],["9","WXYZ"],[".",""],["0",""],["⌫",""]].map(([k, l]) =>
+          `<span class="h-11 rounded-md ${[".","⌫"].includes(k) ? "" : "bg-[#5a5a5e]"} grid place-items-center leading-none"><span class="text-xl">${k}</span>${l ? `<span class="text-[8px] tracking-widest opacity-80">${l}</span>` : ""}</span>`).join("")}
+      </div>
+    </div>`,
+  profile: () => `
+    <div class="relative text-[#f5f7fb] min-h-full">${D.backdrop}
+      <div class="relative px-5 pt-14 pb-36">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="w-11 h-11 rounded-full bg-[#38bdf8] text-[#07090f] grid place-items-center font-bold">V</span><h2 class="text-[28px] font-bold tracking-tight">Vish</h2></div><span class="w-10 h-10 rounded-full bg-white/10 grid place-items-center">⚙︎</span></div>
+        <p class="mt-1 text-[#94a3b8]"><span class="text-[#f5f7fb] font-semibold">3-week streak</span> · last workout 2 days ago</p>
+        <div class="mt-4 rounded-3xl bg-[#141823] p-4">
+          <div class="flex gap-1.5">${["Duration","Volume","Reps"].map((t, i) => `<span class="rounded-full px-3 py-1 text-xs font-semibold ${i === 0 ? "bg-[#f5f7fb] text-[#07090f]" : "bg-white/5 text-[#94a3b8]"}">${t}</span>`).join("")}
+            <span class="ml-auto text-xs text-[#94a3b8] self-center whitespace-nowrap">3 months ▾</span></div>
+          <div class="mt-4 h-28 flex items-end gap-2">
+            ${[1.2,3.9,0.6,0,0,3.2,4.8,2.6,0,1.8].map(h => `<div class="flex-1 h-full flex flex-col justify-end items-center">${h ? `<div class="w-full rounded-md bg-gradient-to-t from-[#38bdf8] to-[#a3e635]" style="height:${h / 4.8 * 100}%"></div>` : `<div class="w-full h-0.5 rounded bg-white/10"></div>`}</div>`).join("")}
+          </div>
+          <div class="flex justify-between mt-1.5 text-[11px] text-[#94a3b8]"><span>Jul 27</span><span>Aug 24</span><span>Sep 21</span><span>Oct 12</span></div>
+        </div>
+        <p class="mt-6 text-sm font-semibold">Personal records</p>
+        <div class="mt-2 rounded-3xl bg-[#141823] px-4">
+          ${PRS.slice(0, 3).map((p, i) => `<div class="py-3 flex items-center gap-3 ${i ? "border-t border-white/5" : ""}"><span class="w-2.5 h-2.5 rounded-full" style="background:${MUSCLE[p.ex]}"></span><div class="flex-1"><p class="font-medium">${p.ex}</p><p class="text-xs text-[#94a3b8]">${p.what}</p></div><p class="font-bold num text-lg">${p.val}</p></div>`).join("")}
+        </div>
+        <div class="mt-6 flex items-center justify-between"><p class="text-sm font-semibold">History</p><p class="text-sm text-[#94a3b8]">Calendar · Exercises</p></div>
+        ${RECENT.map(r => `
+          <div class="mt-2 rounded-2xl bg-[#141823] px-4 py-3 flex items-center gap-3">
+            <span class="w-1.5 self-stretch rounded-full" style="background:${MUSCLE[r.name]}"></span>
+            <div class="flex-1"><p class="font-semibold">${r.name}</p><p class="text-sm text-[#94a3b8]">${r.when} · ${r.dur}</p></div>
+            <p class="text-sm text-[#94a3b8] num">${r.sets} sets</p>
+          </div>`).join("")}
+      </div>
+    </div>
+    ${D.tabbar(2)}`,
+  accessory: () => `
+    <div data-fixed class="absolute bottom-[92px] inset-x-4 rounded-full ${glass} px-4 py-2.5 flex items-center gap-3 text-white z-10">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></span>
+      <div class="flex-1 leading-tight"><p class="text-sm font-semibold">Pull-Up · set 3</p><p class="text-xs text-white/70 num">Evening workout · 38:12 · rest 1:24</p></div>
+      <span class="text-sm font-semibold">Resume</span>
+    </div>`,
+  tabbar: (active) => `
+    <div data-fixed class="absolute bottom-6 left-10 right-10 rounded-full ${glass} grid grid-cols-3 p-1.5 text-[11px] text-center z-10">
+      ${["Home","Workout","Profile"].map((t, i) => `<span class="rounded-full py-1.5 ${i === active ? "bg-white/15 text-white font-semibold" : "text-white/60"}"><span class="block text-lg leading-6">${["⌂","＋","◉"][i]}</span>${t}</span>`).join("")}
+    </div>`,
+};
+D.screens = () => [["Home: your feed + coach", D.home()], ["Workout: routines", D.workouts()], ["Workout logger (iOS keypad + glass bar)", D.logger()], ["Profile: progress + history", D.profile()], ["First run (new user)", D.firstRun()]];
+
+// ---------- switcher ----------
+const VARIANTS = { A, B, C, D };
+const KEYS = Object.keys(VARIANTS);
+// The URL is the source of truth; `fallback` covers pages whose URL can't change (e.g. data: URLs).
+let fallback = null;
+function current() {
+  const v = fallback ?? new URLSearchParams(location.search).get("variant");
+  return KEYS.includes(v) ? v : "A";
+}
+function render() {
+  const key = current(), v = VARIANTS[key];
+  document.getElementById("label").textContent = `${key} (${v.name})`;
+  document.getElementById("title").textContent = `${key}: ${v.name}`;
+  document.getElementById("blurb").textContent = v.blurb;
+  document.getElementById("swatches").innerHTML = v.swatches.map(([c, n]) =>
+    `<span class="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs text-neutral-700 shadow-sm">
+       <span class="w-3.5 h-3.5 rounded-full border border-black/10" style="background:${c}"></span>${n} <code class="text-neutral-400">${c}</code></span>`).join("");
+  document.getElementById("stage").innerHTML = (v.screens ? v.screens() : [["Workouts tab", v.workouts()], ["Workout logger", v.logger()], ["Profile", v.profile()]])
+    .map(([t, html]) => `<figure class="flex flex-col items-center gap-3"><div class="phone"><div class="phone-scroll">${html}</div></div><figcaption class="text-sm text-neutral-600">${t}</figcaption></figure>`).join("");
+  // Pin overlays (tab bar, toolbar, number pad) to the phone frame instead of the scrolling content.
+  document.querySelectorAll(".phone").forEach(ph => ph.querySelectorAll("[data-fixed]").forEach(el => ph.appendChild(el)));
+}
+function go(step) {
+  const i = (KEYS.indexOf(current()) + step + KEYS.length) % KEYS.length;
+  try {
+    const url = new URL(location.href); url.searchParams.set("variant", KEYS[i]);
+    history.replaceState(null, "", url); fallback = null;
+  } catch { fallback = KEYS[i]; }
+  render();
+}
+document.getElementById("prev").onclick = () => go(-1);
+document.getElementById("next").onclick = () => go(1);
+addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (t.closest && t.closest("input, textarea, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") go(-1);
+  if (e.key === "ArrowRight") go(1);
+});
+render();
+</script>
+</body>
+</html>
