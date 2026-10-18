@@ -120,7 +120,7 @@ class AICoachServiceTest {
         secondSet.setRpe(9.0);
 
         when(workoutService.getWorkoutsForUser("user-1")).thenReturn(List.of(activeWorkout, completedWorkout));
-        when(setRepository.findByWorkoutId(1L)).thenReturn(List.of(firstSet, secondSet));
+        when(setRepository.findByWorkoutIdOrderByPosition(1L)).thenReturn(List.of(firstSet, secondSet));
         when(exerciseRepository.findAllById(List.of(10L))).thenReturn(List.of(exercise));
         when(coachModelClient.isConfigured()).thenReturn(true);
         when(coachModelClient.complete(anyString())).thenReturn("""

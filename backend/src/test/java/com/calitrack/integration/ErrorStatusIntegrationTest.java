@@ -8,7 +8,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,7 +39,7 @@ class ErrorStatusIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void malformedJsonIsBadRequest() throws Exception {
-        mockMvc.perform(patch("/api/v1/workouts/1/finish")
+        mockMvc.perform(post("/api/v1/workouts")
                 .with(jwt().jwt(j -> j.subject(TEST_USER)))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{not json"))

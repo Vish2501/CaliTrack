@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Alert, Modal, Pressable, Text, View } from "react-native";
 import WorkoutDetailScreen from "../screens/WorkoutDetailsScreen";
 import ChooseExerciseScreen from "../screens/ChooseExerciseScreen";
-import { commitWorkout } from "../lib/api";
+import { finishWorkout } from "../lib/api";
 import { ActiveWorkoutUI, Exercise, ExerciseEntry } from "../types/workout";
 
 type Props = {
@@ -27,9 +27,31 @@ export default function ActiveWorkoutModal({
   const handleFinishWorkout = async () => {
     if (!ui.workout) return;
 
+    const tickedSets = ui.entries.flatMap((entry) =>
+      entry.sets.filter((set) => set.completed),
+    );
+    if (tickedSets.length === 0) {
+      Alert.alert("Nothing to save", "Tick at least one set to finish.");
+      return;
+    }
+    if (
+      tickedSets.some(
+        (set) => set.reps.trim() === "" || set.weight.trim() === "",
+      )
+    ) {
+      Alert.alert(
+        "Missing values",
+        "Every ticked set needs reps and a weight.",
+      );
+      return;
+    }
+
     setFinishing(true);
     try {
-      const savedCount = await commitWorkout(ui.workout.id, ui.entries);
+      // On failure the workout stays open, and Finish can be tapped again: it sends the same
+      // workout ID, so it can't be saved twice.
+      await finishWorkout(ui.workout, ui.entries);
+      const savedCount = tickedSets.length;
       Alert.alert(
         "Workout Completed",
         `Saved ${savedCount} completed set${savedCount === 1 ? "" : "s"}.`,

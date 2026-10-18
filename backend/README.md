@@ -37,10 +37,10 @@ Migrations: `src/main/resources/db/migration/`
 
 | Method | Path | Status |
 |--------|------|--------|
-| POST | `/workouts` | 201 |
+| POST | `/workouts` (finish a whole workout; the same workout ID again returns it) | 201 / 200 |
 | GET | `/workouts`, `/workouts/{id}` | 200 |
-| PATCH | `/workouts/{id}` (notes), `/workouts/{id}/finish` | 200 |
-| GET/POST | `/workouts/{id}/sets` | 200 / 201 |
+| PATCH | `/workouts/{id}` (notes) | 200 |
+| GET | `/workouts/{id}/sets` | 200 |
 | PATCH/DELETE | `/workouts/{id}/sets/{setId}` | 200 / 204 |
 | GET/POST | `/exercises` | 200 / 201 |
 | DELETE | `/exercises/{id}` | 204 |

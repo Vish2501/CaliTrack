@@ -53,11 +53,10 @@ export default function WorkoutDetailScreen({
   const [localEntries, setLocalEntries] = useState<ExerciseEntry[]>([]);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
 
-  const resolvedWorkout = workout ?? {
-    id: Number(route.params?.workoutId ?? 0),
-    name: "Workout",
-    date: "Today",
-  };
+  const header = workout ?? { name: "Workout", date: "Today" };
+  // A finished workout opened from history is loaded from the server. The active workout is
+  // only on the phone.
+  const historyWorkoutId = embedded ? undefined : route.params?.workoutId;
 
   const isReadOnly = !embedded;
   const displayedEntries = embedded ? entries : localEntries;
@@ -71,14 +70,14 @@ export default function WorkoutDetailScreen({
   };
 
   useEffect(() => {
-    if (!resolvedWorkout.id) return;
+    if (!historyWorkoutId) return;
 
     let active = true;
 
     (async () => {
       try {
         setLoadingWorkout(true);
-        const data = await getWorkoutDetails(resolvedWorkout.id);
+        const data = await getWorkoutDetails(Number(historyWorkoutId));
         if (!active) return;
 
         const grouped = new Map<string, ExerciseEntry>();
@@ -137,7 +136,7 @@ export default function WorkoutDetailScreen({
     return () => {
       active = false;
     };
-  }, [resolvedWorkout.id]);
+  }, [historyWorkoutId]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -245,9 +244,9 @@ export default function WorkoutDetailScreen({
         </Pressable>
         <View className="gap-0.5">
           <Text className="text-xl font-bold text-[#eff6e0]">
-            {resolvedWorkout.name}
+            {header.name}
           </Text>
-          <Text className="text-xs text-[#aec3b0]">{resolvedWorkout.date}</Text>
+          <Text className="text-xs text-[#aec3b0]">{header.date}</Text>
         </View>
         {embedded && (
           <Pressable

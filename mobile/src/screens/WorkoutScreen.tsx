@@ -3,7 +3,8 @@ import { FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ActiveWorkoutModal from "../components/ActiveWorkoutModal";
 import { ActiveWorkoutUI, Exercise, Workout } from "../types/workout";
-import { startWorkout } from "../lib/api";
+import { randomUUID } from "expo-crypto";
+import { trackProductEvent } from "../lib/telemetry";
 
 const TEMPLATES = [
   {
@@ -30,7 +31,6 @@ export default function WorkoutsScreen() {
   const [selectedTemplate, setSelectedTemplate] = useState<
     (typeof TEMPLATES)[number] | null
   >(null);
-  const [startingWorkout, setStartingWorkout] = useState(false);
   const [activeWorkoutUI, setActiveWorkoutUI] = useState<ActiveWorkoutUI>({
     workout: null,
     isOpen: false,
@@ -107,21 +107,20 @@ export default function WorkoutsScreen() {
     setActiveWorkoutUI((prev) => ({ ...prev, entries }));
   }, []);
 
-  const beginWorkout = async (name: string) => {
-    try {
-      setStartingWorkout(true);
-      const workout = await startWorkout();
-      openWorkout({
-        id: workout.id,
-        name,
-        date: new Date(workout.startTime).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-        }),
-      });
-    } finally {
-      setStartingWorkout(false);
-    }
+  // Starting a workout needs no server, so it works with no signal. The server hears about it
+  // only when it is finished.
+  const beginWorkout = (name: string) => {
+    const startedAt = new Date();
+    openWorkout({
+      id: randomUUID(),
+      name,
+      date: startedAt.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      }),
+      startedAt: startedAt.toISOString(),
+    });
+    trackProductEvent("workout_started");
   };
 
   return (
@@ -135,7 +134,7 @@ export default function WorkoutsScreen() {
             onPress={() => beginWorkout("Workout")}
           >
             <Text className="text-[#01161e] font-bold">
-              {startingWorkout ? "Starting..." : "Start Workout"}
+              Start Workout
             </Text>
           </Pressable>
         </View>

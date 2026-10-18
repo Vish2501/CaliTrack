@@ -9,6 +9,7 @@ import com.calitrack.repository.CoachProfileRepository;
 import com.calitrack.repository.CoachRecommendationRepository;
 import com.calitrack.repository.WorkoutRepository;
 import com.calitrack.support.AbstractKafkaIntegrationTest;
+import com.calitrack.support.FinishedWorkouts;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -93,17 +94,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
         profileRepository.save(profile);
         when(coachModelClient.complete(anyString())).thenReturn(MODEL_REPLY);
 
-        String startResponse = mockMvc.perform(post("/api/v1/workouts")
-                .with(jwt().jwt(j -> j.subject(userId))))
-            .andExpect(status().isCreated())
-            .andReturn().getResponse().getContentAsString();
-        long workoutId = Long.parseLong(startResponse.replaceAll(".*\"id\":(\\d+).*", "$1"));
-
-        mockMvc.perform(patch("/api/v1/workouts/{id}/finish", workoutId)
-                .with(jwt().jwt(j -> j.subject(userId)))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-            .andExpect(status().isOk());
+        long workoutId = FinishedWorkouts.finish(mockMvc, userId);
 
         await().atMost(TIMEOUT).until(() -> recommendationRepository.existsByWorkoutId(workoutId));
 
@@ -202,6 +193,7 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
     private Workout saveFinishedWorkout(String userId) {
         Workout workout = new Workout();
         workout.setUserId(userId);
+        workout.setClientId(UUID.randomUUID());
         workout.setStartTime(Instant.now().minus(Duration.ofHours(1)));
         workout.setEndTime(Instant.now());
         return workoutRepository.save(workout);

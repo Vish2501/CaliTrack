@@ -1,4 +1,11 @@
-export type Workout = { id: number; name: string; date: string };
+// The active workout. It lives only on the phone until it is finished.
+export type Workout = {
+  // Generated on the phone, so retrying Finish can't save the workout twice.
+  id: string;
+  name: string;
+  date: string;
+  startedAt: string;
+};
 
 export type Exercise = { id: string; name: string; category: string };
 export type SetEntry = {

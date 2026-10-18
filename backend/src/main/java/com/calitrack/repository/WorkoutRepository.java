@@ -10,12 +10,15 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 public interface WorkoutRepository extends JpaRepository<Workout, Long> {
 
         List<Workout> findByUserId(String userId);
 
         Optional<Workout> findByIdAndUserId(Long id, String userId);
+
+        Optional<Workout> findByUserIdAndClientId(String userId, UUID clientId);
 
         Optional<Workout> findFirstByUserIdAndEndTimeIsNotNullOrderByEndTimeDesc(String userId);
 

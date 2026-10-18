@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -91,6 +92,7 @@ class CoachApiIntegrationTest extends AbstractIntegrationTest {
     private Workout saveRecommendation(String userId, String text) {
         Workout workout = new Workout();
         workout.setUserId(userId);
+        workout.setClientId(UUID.randomUUID());
         workout.setStartTime(Instant.now().minus(Duration.ofHours(1)));
         workout.setEndTime(Instant.now());
         workout = workoutRepository.save(workout);

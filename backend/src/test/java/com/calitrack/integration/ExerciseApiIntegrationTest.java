@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -48,14 +50,7 @@ class ExerciseApiIntegrationTest extends AbstractIntegrationTest {
     void deletingArchivesTheExerciseAndKeepsItsSets() throws Exception {
         String user = "archive-user";
         long exerciseId = createExercise(user, "Pull-Up");
-        long workoutId = startWorkout(user);
-        mockMvc.perform(post("/api/v1/workouts/{workoutId}/sets", workoutId)
-                .with(jwt().jwt(j -> j.subject(user)))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {"exerciseId":%d,"reps":8,"weight":0}
-                    """.formatted(exerciseId)))
-            .andExpect(status().isCreated());
+        long workoutId = finishWorkout(user, exerciseId);
 
         mockMvc.perform(delete("/api/v1/exercises/{id}", exerciseId)
                 .with(jwt().jwt(j -> j.subject(user))))
@@ -139,9 +134,14 @@ class ExerciseApiIntegrationTest extends AbstractIntegrationTest {
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
     }
 
-    private long startWorkout(String userId) throws Exception {
+    private long finishWorkout(String userId, long exerciseId) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/workouts")
-                .with(jwt().jwt(j -> j.subject(userId))))
+                .with(jwt().jwt(j -> j.subject(userId)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"id":"%s","startedAt":"2026-06-01T09:00:00Z","endedAt":"2026-06-01T10:00:00Z",
+                     "sets":[{"exerciseId":%d,"reps":8,"weight":0}]}
+                    """.formatted(UUID.randomUUID(), exerciseId)))
             .andExpect(status().isCreated())
             .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();

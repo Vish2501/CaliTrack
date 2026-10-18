@@ -8,6 +8,7 @@ import com.calitrack.service.CurrentUserService;
 import com.calitrack.service.WorkoutService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -26,10 +27,18 @@ public class WorkoutController {
         this.currentUserService = currentUserService;
     }
 
+    // Saves a finished workout. Safe to retry: sending the same workout ID again returns the
+    // workout already saved (200) instead of saving a copy (201).
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Workout startWorkout(@AuthenticationPrincipal Jwt jwt) {
-        return workoutService.startWorkout(currentUserService.getUserId(jwt));
+    public ResponseEntity<WorkoutDetailsResponse> finishWorkout(
+        @Valid @RequestBody FinishWorkoutRequest request,
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        String userId = currentUserService.getUserId(jwt);
+        return workoutService.findFinishedWorkout(userId, request.id())
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.CREATED)
+                .body(workoutService.finishWorkout(userId, request)));
     }
 
     @GetMapping
@@ -52,18 +61,5 @@ public class WorkoutController {
         @AuthenticationPrincipal Jwt jwt
     ) {
         return workoutService.updateWorkout(workoutId, currentUserService.getUserId(jwt), request.notes());
-    }
-
-    @PatchMapping("/{workoutId}/finish")
-    public Workout finishWorkout(
-        @PathVariable Long workoutId,
-        @Valid @RequestBody(required = false) FinishWorkoutRequest request,
-        @AuthenticationPrincipal Jwt jwt
-    ) {
-        return workoutService.finishWorkout(
-            workoutId,
-            currentUserService.getUserId(jwt),
-            request != null ? request.endedAt() : null
-        );
     }
 }

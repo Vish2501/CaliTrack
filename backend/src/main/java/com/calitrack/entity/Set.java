@@ -3,7 +3,6 @@ package com.calitrack.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import java.time.Instant;
 
 @Entity
 @Table(name = "sets")
@@ -25,6 +24,7 @@ public class Set {
     private Double weight;
     private Double rpe;
 
+    // Where the set comes in its workout, from 0.
     @Column(nullable = false)
-    private Instant timestamp;
+    private Integer position;
 }
