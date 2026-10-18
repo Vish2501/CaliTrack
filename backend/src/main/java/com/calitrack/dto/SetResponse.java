@@ -1,6 +1,6 @@
 package com.calitrack.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record SetResponse(
     Long id,
@@ -10,6 +10,6 @@ public record SetResponse(
     Integer reps,
     Double weight,
     Double rpe,
-    LocalDateTime timestamp
+    Instant timestamp
 ) {}
 

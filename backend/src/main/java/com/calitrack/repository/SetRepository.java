@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public interface SetRepository extends JpaRepository<Set, Long> {
@@ -27,14 +27,14 @@ Optional<Set> findByIdAndWorkoutId(Long id, Long workoutId);
       JOIN workouts w ON s.workout_id = w.id
       JOIN exercises e ON s.exercise_id = e.id
       WHERE w.user_id = :userId
-        AND w.start_time BETWEEN :start AND :end
+        AND w.start_time >= :start AND w.start_time < :end
       GROUP BY s.exercise_id, e.name
 
       """, nativeQuery = true)
   List<WeeklyVolumeView> findWeeklyVolume(
       @Param("userId") String userId,
-      @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end);
+      @Param("start") Instant start,
+      @Param("end") Instant end);
 
   @Query(value = """
           SELECT s.exercise_id AS exerciseId,

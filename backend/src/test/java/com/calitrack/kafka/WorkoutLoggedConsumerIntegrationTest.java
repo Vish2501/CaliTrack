@@ -33,7 +33,7 @@ import org.springframework.web.client.ResourceAccessException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -202,8 +202,8 @@ class WorkoutLoggedConsumerIntegrationTest extends AbstractKafkaIntegrationTest 
     private Workout saveFinishedWorkout(String userId) {
         Workout workout = new Workout();
         workout.setUserId(userId);
-        workout.setStartTime(LocalDateTime.now().minusHours(1));
-        workout.setEndTime(LocalDateTime.now());
+        workout.setStartTime(Instant.now().minus(Duration.ofHours(1)));
+        workout.setEndTime(Instant.now());
         return workoutRepository.save(workout);
     }
 

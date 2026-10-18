@@ -13,7 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -46,7 +46,7 @@ public class SetService {
         set.setReps(request.reps());
         set.setWeight(request.weight());
         set.setRpe(request.rpe());
-        set.setTimestamp(request.timestamp() != null ? request.timestamp() : LocalDateTime.now());
+        set.setTimestamp(request.timestamp() != null ? request.timestamp() : Instant.now());
 
         Set saved = setRepository.save(set);
         return toResponse(saved, exercise.getName());

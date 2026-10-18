@@ -18,7 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -91,13 +91,13 @@ class AICoachServiceTest {
         Workout completedWorkout = new Workout();
         completedWorkout.setId(1L);
         completedWorkout.setUserId("user-1");
-        completedWorkout.setStartTime(LocalDateTime.of(2026, 5, 20, 9, 0));
-        completedWorkout.setEndTime(LocalDateTime.of(2026, 5, 20, 10, 0));
+        completedWorkout.setStartTime(Instant.parse("2026-05-20T09:00:00Z"));
+        completedWorkout.setEndTime(Instant.parse("2026-05-20T10:00:00Z"));
 
         Workout activeWorkout = new Workout();
         activeWorkout.setId(2L);
         activeWorkout.setUserId("user-1");
-        activeWorkout.setStartTime(LocalDateTime.of(2026, 5, 21, 9, 0));
+        activeWorkout.setStartTime(Instant.parse("2026-05-21T09:00:00Z"));
 
         Exercise exercise = new Exercise();
         exercise.setId(10L);

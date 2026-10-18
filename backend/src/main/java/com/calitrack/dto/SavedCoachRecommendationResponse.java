@@ -1,11 +1,11 @@
 package com.calitrack.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record SavedCoachRecommendationResponse(
         Long workoutId,
         String recommendation,
         String focusArea,
         String suggestedNextExercise,
-        LocalDateTime createdAt) {
+        Instant createdAt) {
 }

@@ -8,7 +8,8 @@ import com.calitrack.repository.WorkoutRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import com.calitrack.projection.HeaviestPrView;
 import com.calitrack.projection.SetVolumePrView;
@@ -24,9 +25,10 @@ public class AnalyticsService {
         this.workoutRepository = workoutRepository;
     }
 
-    public List<WeeklyVolumeView> getWeeklyVolume(LocalDate weekStart, String userId) {
-        LocalDateTime start = weekStart.atStartOfDay();
-        LocalDateTime end = weekStart.plusDays(7).atStartOfDay();
+    // Days start at midnight in the user's time zone. Ranges are half-open: the end moment is excluded.
+    public List<WeeklyVolumeView> getWeeklyVolume(LocalDate weekStart, ZoneId timeZone, String userId) {
+        Instant start = weekStart.atStartOfDay(timeZone).toInstant();
+        Instant end = weekStart.plusDays(7).atStartOfDay(timeZone).toInstant();
 
         return setRepository.findWeeklyVolume(userId, start, end);
     }
@@ -39,9 +41,9 @@ public class AnalyticsService {
         return setRepository.findMaxSetVolume(userId);
     }
 
-    public List<WorkoutFrequencyView> getWorkoutFrequency(LocalDate start, LocalDate end, String userId) {
-        LocalDateTime startDt = start.atStartOfDay();
-        LocalDateTime endDt = end.plusDays(1).atStartOfDay(); // include end date
-        return workoutRepository.findWorkoutFrequency(userId, startDt, endDt);
+    public List<WorkoutFrequencyView> getWorkoutFrequency(LocalDate start, LocalDate end, ZoneId timeZone, String userId) {
+        Instant from = start.atStartOfDay(timeZone).toInstant();
+        Instant until = end.plusDays(1).atStartOfDay(timeZone).toInstant(); // the end date is included
+        return workoutRepository.findWorkoutFrequency(userId, from, until, timeZone.getId());
     }
 }

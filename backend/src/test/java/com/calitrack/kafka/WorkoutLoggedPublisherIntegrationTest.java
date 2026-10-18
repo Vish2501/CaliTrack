@@ -14,7 +14,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,7 +58,7 @@ class WorkoutLoggedPublisherIntegrationTest extends AbstractKafkaIntegrationTest
         JsonNode payload = objectMapper.readTree(record.value());
         assertThat(payload.get("workoutId").asLong()).isEqualTo(workoutId);
         assertThat(payload.get("userId").asText()).isEqualTo(TEST_USER);
-        assertThat(LocalDateTime.parse(payload.get("finishedAt").asText())).isNotNull();
+        assertThat(Instant.parse(payload.get("finishedAt").asText())).isNotNull();
     }
 
     private Optional<ConsumerRecord<String, String>> pollForWorkout(long workoutId) {

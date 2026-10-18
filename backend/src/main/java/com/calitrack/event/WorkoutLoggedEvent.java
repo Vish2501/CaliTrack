@@ -2,7 +2,7 @@ package com.calitrack.event;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * Raised when a workout is finished. Published inside the app as a Spring event and, when the
@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 public record WorkoutLoggedEvent(
     Long workoutId,
     String userId,
-    // Spring Kafka's JsonSerializer would otherwise write dates as number arrays.
-    @JsonFormat(shape = JsonFormat.Shape.STRING) LocalDateTime finishedAt
+    // Spring Kafka's JsonSerializer would otherwise write the time as a number.
+    @JsonFormat(shape = JsonFormat.Shape.STRING) Instant finishedAt
 ) {
 }

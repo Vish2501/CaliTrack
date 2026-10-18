@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 public class CoachRecommendationService {
@@ -63,7 +63,7 @@ public class CoachRecommendationService {
             return false;
         }
         return workoutRepository.findFirstByUserIdAndEndTimeIsNotNullOrderByEndTimeDesc(userId)
-            .filter(workout -> workout.getEndTime().isAfter(LocalDateTime.now().minus(PENDING_WINDOW)))
+            .filter(workout -> workout.getEndTime().isAfter(Instant.now().minus(PENDING_WINDOW)))
             .map(workout -> !recommendationRepository.existsByWorkoutId(workout.getId()))
             .orElse(false);
     }

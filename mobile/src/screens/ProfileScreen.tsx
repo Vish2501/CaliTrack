@@ -16,8 +16,12 @@ function getWeekStart(date: Date) {
   return value;
 }
 
+// The local calendar date as YYYY-MM-DD. toISOString() would give the UTC date, which is the
+// day before for a local midnight east of UTC.
 function toIsoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 export default function ProfileScreen() {
@@ -62,10 +66,10 @@ export default function ProfileScreen() {
     yAxisTicks.push(0);
   }
 
+  // weekStart is a plain date; new Date("YYYY-MM-DD") would read it as UTC midnight.
   const formatWeekLabel = (weekStart: string) => {
-    const parsed = new Date(weekStart);
-    if (Number.isNaN(parsed.getTime())) return weekStart;
-    return `${parsed.getDate()}/${parsed.getMonth() + 1}`;
+    const [, month, day] = weekStart.split("-").map(Number);
+    return `${day}/${month}`;
   };
 
   const handleLogout = async () => {

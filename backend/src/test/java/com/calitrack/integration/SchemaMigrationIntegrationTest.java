@@ -11,9 +11,14 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 
-import java.time.LocalDateTime;
+import javax.sql.DataSource;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,6 +35,9 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
     private Flyway flyway;
 
     @Autowired
+    private DataSource dataSource;
+
+    @Autowired
     private WorkoutRepository workoutRepository;
 
     @Autowired
@@ -40,7 +48,34 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void migrationsApplyUpToLatestVersion() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
+    }
+
+    @Test
+    void timesWrittenBeforeV3KeepTheirUtcMoments() {
+        // A schema of its own, so the migrations can be stopped at V2 and data written the old way.
+        String schema = "before_v3";
+        Flyway.configure().dataSource(dataSource).schemas(schema).target("2").load().migrate();
+
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        String utcNoon = "2026-06-01 12:00:00";
+        jdbc.update("INSERT INTO " + schema + ".workouts (id, user_id, start_time, end_time) VALUES (1, 'u', ?::timestamp, ?::timestamp)", utcNoon, utcNoon);
+        jdbc.update("INSERT INTO " + schema + ".exercises (id, name, user_id) VALUES (1, 'Squat', 'u')");
+        jdbc.update("INSERT INTO " + schema + ".sets (workout_id, exercise_id, timestamp) VALUES (1, 1, ?::timestamp)", utcNoon);
+        jdbc.update("INSERT INTO " + schema + ".coach_recommendations (user_id, workout_id, recommendation, focus_area, next_exercise, created_at) VALUES ('u', 1, 'r', 'f', 'n', ?::timestamp)", utcNoon);
+        jdbc.update("INSERT INTO " + schema + ".coach_profiles (user_id, goals, fitness_level, updated_at) VALUES ('u', 'g', 'l', ?::timestamp)", utcNoon);
+
+        // A session zone far from UTC proves V3 doesn't read old values in the session's zone.
+        Flyway.configure().dataSource(dataSource).schemas(schema)
+            .initSql("SET TIME ZONE 'Pacific/Auckland'")
+            .load().migrate();
+
+        Instant utcNoonMoment = Instant.parse("2026-06-01T12:00:00Z");
+        assertThat(momentIn(schema, "workouts", "start_time")).isEqualTo(utcNoonMoment);
+        assertThat(momentIn(schema, "workouts", "end_time")).isEqualTo(utcNoonMoment);
+        assertThat(momentIn(schema, "sets", "timestamp")).isEqualTo(utcNoonMoment);
+        assertThat(momentIn(schema, "coach_recommendations", "created_at")).isEqualTo(utcNoonMoment);
+        assertThat(momentIn(schema, "coach_profiles", "updated_at")).isEqualTo(utcNoonMoment);
     }
 
     @Test
@@ -88,9 +123,15 @@ class SchemaMigrationIntegrationTest extends AbstractIntegrationTest {
     private Workout saveWorkout(String userId) {
         Workout workout = new Workout();
         workout.setUserId(userId);
-        workout.setStartTime(LocalDateTime.now().minusHours(1));
-        workout.setEndTime(LocalDateTime.now());
+        workout.setStartTime(Instant.now().minus(Duration.ofHours(1)));
+        workout.setEndTime(Instant.now());
         return workoutRepository.saveAndFlush(workout);
+    }
+
+    private Instant momentIn(String schema, String table, String column) {
+        return new JdbcTemplate(dataSource)
+            .queryForObject("SELECT " + column + " FROM " + schema + "." + table, OffsetDateTime.class)
+            .toInstant();
     }
 
     private CoachRecommendation recommendationFor(Workout workout) {

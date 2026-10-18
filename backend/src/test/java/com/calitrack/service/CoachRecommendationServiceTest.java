@@ -10,7 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,7 +59,7 @@ class CoachRecommendationServiceTest {
 
     @Test
     void pendingWhenTheLatestFinishedWorkoutHasNoRecommendationYet() {
-        Workout workout = finishedWorkout(LocalDateTime.now().minusSeconds(10));
+        Workout workout = finishedWorkout(Instant.now().minusSeconds(10));
         when(recommendationRepository.findFirstByUserIdOrderByIdDesc(USER)).thenReturn(Optional.empty());
         when(workoutRepository.findFirstByUserIdAndEndTimeIsNotNullOrderByEndTimeDesc(USER))
             .thenReturn(Optional.of(workout));
@@ -69,7 +70,7 @@ class CoachRecommendationServiceTest {
 
     @Test
     void notPendingOnceTheLatestWorkoutHasARecommendation() {
-        Workout workout = finishedWorkout(LocalDateTime.now().minusSeconds(10));
+        Workout workout = finishedWorkout(Instant.now().minusSeconds(10));
         when(recommendationRepository.findFirstByUserIdOrderByIdDesc(USER)).thenReturn(Optional.empty());
         when(workoutRepository.findFirstByUserIdAndEndTimeIsNotNullOrderByEndTimeDesc(USER))
             .thenReturn(Optional.of(workout));
@@ -81,7 +82,7 @@ class CoachRecommendationServiceTest {
     @Test
     void notPendingWhenTheWorkoutFinishedLongerAgoThanTheWindow() {
         Workout workout = finishedWorkout(
-            LocalDateTime.now().minus(CoachRecommendationService.PENDING_WINDOW).minusSeconds(1));
+            Instant.now().minus(CoachRecommendationService.PENDING_WINDOW).minusSeconds(1));
         when(recommendationRepository.findFirstByUserIdOrderByIdDesc(USER)).thenReturn(Optional.empty());
         when(workoutRepository.findFirstByUserIdAndEndTimeIsNotNullOrderByEndTimeDesc(USER))
             .thenReturn(Optional.of(workout));
@@ -94,11 +95,11 @@ class CoachRecommendationServiceTest {
             aiCoachService, coachProfileService, recommendationRepository, workoutRepository, asyncEnabled);
     }
 
-    private static Workout finishedWorkout(LocalDateTime endTime) {
+    private static Workout finishedWorkout(Instant endTime) {
         Workout workout = new Workout();
         workout.setId(42L);
         workout.setUserId(USER);
-        workout.setStartTime(endTime.minusHours(1));
+        workout.setStartTime(endTime.minus(Duration.ofHours(1)));
         workout.setEndTime(endTime);
         return workout;
     }

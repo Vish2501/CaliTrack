@@ -16,7 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,7 +66,7 @@ class WorkoutServiceTest {
         Workout workout = new Workout();
         workout.setId(10L);
         workout.setUserId("user-1");
-        workout.setStartTime(LocalDateTime.now());
+        workout.setStartTime(Instant.now());
 
         Set set = new Set();
         set.setId(5L);
@@ -74,7 +75,7 @@ class WorkoutServiceTest {
         set.setReps(12);
         set.setWeight(0.0);
         set.setRpe(7.0);
-        set.setTimestamp(LocalDateTime.now());
+        set.setTimestamp(Instant.now());
 
         Exercise exercise = new Exercise();
         exercise.setId(20L);
@@ -105,8 +106,8 @@ class WorkoutServiceTest {
         Workout workout = new Workout();
         workout.setId(10L);
         workout.setUserId("user-1");
-        workout.setStartTime(LocalDateTime.now().minusHours(1));
-        LocalDateTime endedAt = LocalDateTime.now();
+        workout.setStartTime(Instant.now().minus(Duration.ofHours(1)));
+        Instant endedAt = Instant.now();
 
         when(workoutRepository.findByIdAndUserId(10L, "user-1")).thenReturn(Optional.of(workout));
         when(workoutRepository.save(workout)).thenReturn(workout);
